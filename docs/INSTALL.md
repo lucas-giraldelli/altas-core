@@ -1,8 +1,8 @@
 # Installing atlas-core: a knowledge base from plain HTML
 
-This guide is written for a coding agent (or a person) setting up a site like [Atlas](https://github.com/lucas-giraldelli/atlas) from zero. Every step is a command or a complete file. At the end there is a static site that reads `content/**/*.html`, renders each page with the theme, table of contents, Mermaid, KaTeX and highlighted code, and lists everything on a home page grouped by folder.
+This guide is written for a coding agent (or a person) setting up a knowledge-base site on atlas-core from zero. Every step is a command or a complete file. At the end there is a static site that reads `content/**/*.html`, renders each page with the theme, table of contents, Mermaid, KaTeX and highlighted code, and lists everything on a home page grouped by folder.
 
-What this guide does not cover: authentication, notes, reading progress, the LLM worker and the filesystem sync. Those live in the Atlas application repository and depend on PocketBase; see "Going further" at the end.
+What this guide does not cover: authentication, notes, reading progress, the LLM worker and the filesystem sync. Those belong to the application layer and are outlined in "Going further" at the end.
 
 ## 1. Requirements
 
@@ -167,11 +167,21 @@ export const load: PageLoad = ({ params }) => {
 
 ## 8. Raw files
 
-Legacy pages (no `atlas-mode` meta) and attachments (`.pdf`, images, `.ahtml`) are served untouched under `/raw/`. Copy `content/` into `static/raw/` before building; the Atlas repository does this with a small script (`scripts/sync-raw.mjs`) run in the `build` script:
+Legacy pages (no `atlas-mode` meta) and attachments (`.pdf`, images, `.ahtml`) are served untouched under `/raw/`. Copy `content/` into `static/raw/` before building. `scripts/sync-raw.mjs`:
+
+```js
+import { cpSync, rmSync } from 'node:fs';
+rmSync('static/raw', { recursive: true, force: true });
+cpSync('content', 'static/raw', { recursive: true });
+```
+
+and in `package.json`:
 
 ```json
 "build": "node scripts/sync-raw.mjs && vite build"
 ```
+
+Add `static/raw` to `.gitignore`.
 
 ## 9. First page
 
@@ -183,8 +193,22 @@ pnpm build && pnpm preview
 
 ## 10. Serving
 
-Any static server works on `build/`. With nginx, point `root` at `build`, add `try_files $uri $uri/ /200.html;` and serve `/raw/` from `build/raw/`. The Atlas repository has a complete `nginx.conf` and `docker-compose.yml`.
+Any static server works on `build/`. A minimal nginx server block:
+
+```nginx
+server {
+  listen 80;
+  root /srv/site/build;
+  absolute_redirect off;
+  types { text/html ahtml; application/manifest+json webmanifest; }
+  include /etc/nginx/mime.types;
+  location /_app/ { expires 1y; add_header Cache-Control "public, immutable"; }
+  location / { try_files $uri $uri/index.html $uri/ /200.html; }
+}
+```
+
+Build output changes hashes on every build, so `_app/` can be cached forever; HTML must not be.
 
 ## Going further
 
-The Atlas application adds, on top of this core, a PocketBase instance (SQLite, one container) that stores notes per section, a checklist with LLM grading, reading position, archived and read flags, group names and order, and a request queue for a worker that writes new pages with Gemini and keeps `content/` folders in sync with the categories shown in the interface. All of it is in <https://github.com/lucas-giraldelli/atlas>: `pb_hooks/`, `scripts/pb-setup.mjs`, `scripts/worker.mjs`, `scripts/fs-ops.mjs`, `src/lib/db/` and `src/lib/widgets/`. The core has no dependency on any of it.
+A personal instance usually adds a small backend for what a static site cannot hold: notes per section, a checklist with answers graded by a language model, reading position synced between devices, archived and read flags, display names and order of groups, and a queue for a worker that writes new pages or moves files on disk. PocketBase (one binary, SQLite) is enough for all of it: collections for `notes`, `progress`, `overrides`, `groups`, `requests` and `aliases`, a JS hook for the grading endpoint, and a Node worker on the machine that owns the git repository. The core has no dependency on any of this; it only needs the HTML files and the two components shown above. Widgets that need a backend are mounted into the rendered page with `mountIn(root, selector, Component, props)` after `enhance` has run.
