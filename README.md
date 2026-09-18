@@ -1,6 +1,6 @@
 # atlas-core
 
-Core of [Atlas](https://github.com/lucas-giraldelli/atlas), a personal knowledge base built from plain didactic HTML pages. The library turns a folder of `.html` files into a themed, pre-rendered SvelteKit site: it extracts the `<main>` and metadata of each page, applies light and dark themes, builds a table of contents and renders Mermaid diagrams, KaTeX formulas and highlighted code.
+Core of Atlas, a personal knowledge base built from plain didactic HTML pages. The library turns a folder of `.html` files into a themed, pre-rendered SvelteKit site: it extracts the `<main>` and metadata of each page, applies light and dark themes, builds a table of contents and renders Mermaid diagrams, KaTeX formulas and highlighted code.
 
 The repository accepts no issues or pull requests. It is published as reference and for reuse.
 
