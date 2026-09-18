@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="{{LANG}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<meta name="description" content="{{DECK}}">
+<meta name="atlas-mode" content="{{MODE}}">
+<meta name="atlas-source" content="{{SOURCE_URL}}">
+<meta name="atlas-date" content="{{DATE}}">
+</head>
+<body>
+
+<main>
+
+<div class="doc-head">
+  <h1>{{TITLE}}</h1>
+  <p class="deck">{{DECK}}</p>
+</div>
+
+<div class="module-head">
+  <h2>{{MODULE_TITLE}}</h2>
+  <p>{{MODULE_SCOPE}}</p>
+</div>
+
+<!-- Tópico 0: prosa livre -->
+<section class="topic" id="de-onde-vem">
+  <h3>De onde vem</h3>
+  <p class="lede">{{T0_LEDE}}</p>
+  <p class="lede-para">{{T0_P1}}</p>
+  <p>{{T0_P2}}</p>
+</section>
+
+<!-- Tópicos numerados: repetir este bloco; remover componentes que não couberem -->
+<section class="topic" id="{{T_ID}}">
+  <h3><span class="n">1</span>{{T_TITLE}}</h3>
+  <p class="lede">{{T_LEDE}}</p>
+
+  <div class="box">
+    <span class="tag">Definição</span>
+    <p>{{T_DEF}}</p>
+  </div>
+
+  <figure class="diagram">
+    <pre class="mermaid">
+{{MERMAID}}
+    </pre>
+    <figcaption>{{CAPTION}}</figcaption>
+  </figure>
+
+  <h4>{{T_H4}}</h4>
+  <p>{{T_BODY}}</p>
+
+  <div class="box note">
+    <span class="tag">Observação</span>
+    <p>{{T_NOTE}}</p>
+  </div>
+
+  <div class="box warn">
+    <span class="tag">Atenção</span>
+    <p>{{T_WARN}}</p>
+  </div>
+
+  <div class="steps">
+    <span class="lbl">Primeiro caminho: {{STEP1}}</span>
+    <p>{{STEP1_BODY}}</p>
+    <span class="lbl">Segundo caminho: {{STEP2}}</span>
+    <p>{{STEP2_BODY}}</p>
+  </div>
+
+  <!-- cards: 2 a 4 coisas comparáveis lado a lado -->
+  <div class="cards">
+    <div class="card"><h4>{{CARD_TITLE}}</h4><span class="tag">{{CARD_SUB}}</span><p>{{CARD_BODY}}</p></div>
+    <div class="card amber"><h4>{{CARD_TITLE}}</h4><span class="tag">{{CARD_SUB}}</span><div class="row"><b>campo:</b> <span>valor</span></div></div>
+  </div>
+
+  <!-- enumeração fechada -->
+  <ol class="numbered">
+    <li><span class="n">1</span><span><span class="name">{{ITEM}}</span> <span class="opt">{{AVISO}}</span><span class="desc">. {{DESC}}</span></span></li>
+  </ol>
+
+  <!-- só em leitura -->
+  <blockquote>{{QUOTE}}<footer>— {{QUOTE_SRC}}</footer></blockquote>
+
+  <!-- no último tópico conceitual -->
+  <div class="box analogy">
+    <span class="tag">Para fixar</span>
+    <p>{{ANALOGY}}</p>
+  </div>
+</section>
+
+<hr class="sep">
+
+<section class="topic" id="erros">
+  <h3><span class="n">N</span>Erros mais comuns</h3>
+  <div class="table-wrap">
+    <table>
+      <tr><th style="width:42%">Entendimento incorreto</th><th>O que acontece de fato</th></tr>
+      <tr><td class="bad">{{ERR}}</td><td>{{ERR_WHY}}</td></tr>
+    </table>
+  </div>
+</section>
+
+<section class="topic" id="verificacao">
+  <h3><span class="n">N</span>{{VERIF_TITLE}}</h3>
+  <p class="lede">{{VERIF_LEDE}}</p>
+  <div class="ex-block">
+    <div class="ex">
+      <div class="ex-q"><span class="ex-num">1</span><div class="ex-body"><p>{{Q}}</p></div></div>
+      <div class="ex-actions"><button class="btn reveal">Ver resolução</button><button class="btn reveal hint">Dica</button></div>
+      <div class="panel hint-panel" hidden><div class="panel-inner"><p>{{HINT}}</p></div></div>
+      <div class="panel" hidden><div class="panel-inner"><p>{{A}}</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="topic" id="checklist">
+  <h3><span class="n">N</span>Verificação interativa</h3>
+  <p class="lede">Ao fim deste módulo o leitor deve ser capaz de:</p>
+  <ul class="checklist">
+    <li>{{CHECK}}</li>
+  </ul>
+</section>
+
+</main>
+</body>
+</html>

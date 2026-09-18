@@ -1,0 +1,16 @@
+/* blocos de código: <pre data-lang="php"><code>…</code></pre>. Tokens do highlight.js mapeados para a paleta. */
+pre[data-lang]{position:relative;}
+pre[data-lang]::after{content:attr(data-lang); position:absolute; top:8px; right:12px; font-size:.7em; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-3);}
+.hljs-comment, .hljs-quote{color:var(--ink-3); font-style:italic;}
+.hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-doctag, .hljs-meta .hljs-keyword{color:var(--violet);}
+.hljs-built_in, .hljs-type, .hljs-class .hljs-title, .hljs-title.class_, .hljs-title.class_.inherited__{color:var(--amber);}
+.hljs-title, .hljs-title.function_, .hljs-function .hljs-title{color:var(--blue);}
+.hljs-string, .hljs-regexp, .hljs-addition, .hljs-template-tag{color:var(--green);}
+.hljs-number, .hljs-symbol, .hljs-bullet, .hljs-link{color:var(--orange);}
+.hljs-variable, .hljs-template-variable, .hljs-params, .hljs-property, .hljs-attr{color:var(--code-fg);}
+.hljs-variable.language_, .hljs-subst{color:var(--pink);}
+.hljs-attribute, .hljs-name, .hljs-tag, .hljs-selector-class, .hljs-selector-id{color:var(--teal);}
+.hljs-operator, .hljs-punctuation{color:var(--ink-2);}
+.hljs-deletion{color:var(--red);}
+.hljs-meta, .hljs-section{color:var(--sky);}
+.hljs-emphasis{font-style:italic;} .hljs-strong{font-weight:700;}

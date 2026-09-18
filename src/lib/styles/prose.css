@@ -1,0 +1,234 @@
+/* base + prosa do conteúdo: tipografia, boxes, steps, tabelas, figuras, mermaid, citações */
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth; scroll-padding-top:30px;}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto;}
+  *{transition:none !important;}
+}
+
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--serif);
+  font-size:var(--fs);
+  line-height:var(--lh);
+  -webkit-font-smoothing:antialiased;
+}
+
+/* coluna de leitura centralizada no espaço que sobra à direita da TOC (.reading só nas páginas) */
+.reading{padding-left:var(--toc-w);}
+main{
+  margin:0 auto;
+  padding:60px 64px 140px;
+  max-width:calc(var(--measure) + 128px);
+}
+/* blocos largos (cards, diagramas, tabelas, código) "sangram" simetricamente além da coluna de texto, até --wide */
+@media (min-width:1100px){
+  main .cards, main figure, main .table-wrap, main pre{
+    --w:min(var(--wide), calc(100vw - var(--toc-w) - 120px));
+    width:var(--w); margin-left:calc((100% - var(--w)) / 2);
+  }
+  :root[data-toc="closed"] main .cards, :root[data-toc="closed"] main figure, :root[data-toc="closed"] main .table-wrap, :root[data-toc="closed"] main pre{ --w:min(var(--wide), calc(100vw - 120px)); }
+  main .cards{ --w:min(var(--wide), calc(100vw - var(--toc-w) - 120px), 100%); }
+  main .cards:has(> :nth-child(3)){ --w:min(var(--wide), calc(100vw - var(--toc-w) - 120px)); }
+}
+
+.doc-head{margin-bottom:64px;}
+h1{
+  font-size:calc(var(--fs) * 2.2); font-weight:400; line-height:1.15;
+  margin:0 0 10px; letter-spacing:-.015em;
+}
+.deck{color:var(--ink-2); font-size:calc(var(--fs) * 1.05); margin:0;}
+
+.module-head{
+  margin:0 0 44px;
+  padding:26px 0 22px;
+  border-top:1px solid var(--rule-2);
+  border-bottom:1px solid var(--rule-2);
+}
+.module-head .kicker{
+  color:var(--amber); font-size:.82em; display:block; margin-bottom:6px;
+}
+.module-head h2{
+  font-size:calc(var(--fs) * 1.7); font-weight:400; margin:0 0 8px; letter-spacing:-.01em;
+}
+.module-head p{margin:0; color:var(--ink-2); font-size:.95em;}
+
+section.topic{scroll-margin-top:30px;}
+
+h3{
+  font-size:calc(var(--fs) * 1.35); font-weight:400;
+  margin:62px 0 6px; letter-spacing:-.005em;
+}
+h3 .n{color:var(--blue); font-size:.75em; margin-right:.55em;}
+h3 + .lede{color:var(--ink-2); margin:0 0 26px; font-size:calc(var(--fs) * .95);}
+h4{font-size:calc(var(--fs) * 1.05); font-weight:700; margin:36px 0 12px;}
+
+p{margin:0 0 19px;}
+ul,ol{margin:0 0 19px; padding-left:24px;}
+li{margin-bottom:9px;}
+strong{color:var(--ink-strong);}
+em{color:var(--ink);}
+
+.sep{border:0; border-top:1px solid var(--rule); margin:56px 0 0;}
+
+.katex{font-size:1.08em;}
+.eq{margin:26px 0; padding:4px 0; overflow-x:auto; overflow-y:hidden;}
+.eq .katex-display{margin:.5em 0;}
+
+.steps{margin:26px 0; border-left:2px solid var(--rule-2); padding-left:26px;}
+.steps .lbl{display:block; color:var(--ink-2); font-size:.86em; margin:22px 0 2px;}
+.steps .lbl:first-child{margin-top:0;}
+
+.box{
+  margin:28px 0; padding:20px 24px;
+  background:var(--surface);
+  border:1px solid var(--rule);
+  border-left:3px solid var(--blue);
+}
+.box .tag{display:block; color:var(--blue); font-size:.82em; margin-bottom:6px;}
+.box p:last-child, .box .eq:last-child{margin-bottom:0;}
+.box.warn{border-left-color:var(--red); background:color-mix(in srgb,var(--red) 6%,transparent);}
+.box.warn .tag{color:var(--red);}
+.box.note{border-left-color:var(--amber); background:color-mix(in srgb,var(--amber) 6%,transparent);}
+.box.note .tag{color:var(--amber);}
+
+figure{
+  margin:32px 0; padding:24px 26px 20px;
+  background:var(--bg-2); border:1px solid var(--rule);
+}
+figure svg:not(.mermaid svg){display:block; width:100%; height:auto;}
+figcaption{margin-top:16px; color:var(--ink-2); font-size:.86em; line-height:1.6;}
+.s-lbl{font-family:Georgia,serif; font-size:15px; fill:var(--ink);}
+.s-lbl-2{font-family:Georgia,serif; font-size:13.5px; fill:var(--ink-2);}
+
+.table-wrap{overflow-x:auto; margin:28px 0;}
+table{width:100%; border-collapse:collapse; font-size:.9em;}
+th,td{
+  text-align:left; padding:12px 15px;
+  border-bottom:1px solid var(--rule); vertical-align:middle;
+}
+th{font-weight:700; font-size:15px; color:var(--ink); border-bottom:1.5px solid var(--rule-2);}
+tr:last-child td{border-bottom:0;}
+td.bad{color:var(--red);}
+
+@media (max-width:1080px){ main{padding:60px 40px 120px;} }
+@media (max-width:900px){
+  .reading{padding-left:0;}
+  main{padding:74px 5vw 100px;}
+  figure{padding:16px 14px 14px;}
+  .eq{font-size:.95em;}
+}
+
+/* ===== atlas additions ===== */
+
+pre.code, pre:not(.mermaid){
+  background:var(--code-bg); color:var(--code-fg);
+  font-family:var(--mono); font-size:14px; line-height:1.7;
+  padding:16px 20px; overflow-x:auto; border:1px solid var(--rule); margin:24px 0;
+}
+code{font-family:var(--mono); font-size:.9em; background:var(--surface); border:1px solid var(--rule); border-radius:2px; padding:1px 5px;}
+pre code{background:none; border:0; padding:0; font-size:inherit;}
+
+.mermaid{text-align:center;}
+.mermaid svg{min-width:0 !important; max-width:100% !important; width:auto !important; height:auto; margin:0 auto;}
+figure.diagram{overflow:hidden;}
+
+.analogy{border-left-color:var(--amber);}
+.lede-para::first-letter{color:var(--blue); font-size:3em; float:left; line-height:.85; margin:6px 10px 0 0; font-weight:400;}
+
+/* leitura: citações */
+blockquote{margin:28px 0; padding:6px 0 6px 24px; border-left:3px solid var(--amber); color:var(--ink); font-style:italic; font-size:18px;}
+blockquote footer{font-style:normal; color:var(--ink-2); font-size:15px; margin-top:8px;}
+.module-head .kicker a{color:inherit; text-decoration:underline dotted;}
+section.topic h3:not(:has(.n)){margin-top:48px;}
+
+/* realce de sintaxe dos blocos migrados (.kw .fn .str .cm .num .var) e legenda do pre */
+pre.code[data-cap]::before{content:attr(data-cap); display:block; font-size:.75em; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-3); margin-bottom:10px;}
+pre .kw{color:var(--blue);} pre .fn{color:var(--amber);} pre .str{color:var(--green);} pre .cm{color:var(--ink-3); font-style:italic;} pre .num{color:var(--red);} pre .var{color:var(--code-fg);}
+
+/* linha de contexto no topo de toda página: categoria · sub · modo · ref */
+.ref{font-family:var(--mono); font-size:.72em; letter-spacing:.03em; color:var(--ink-3); margin:0 0 28px;}
+.ref a{color:var(--amber); text-decoration:none;} .ref a:hover{text-decoration:underline;}
+
+/* cards lado a lado (atores, entidades, opções); acento via classe blue|amber|green|red */
+.cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin:22px 0;}
+.card{background:var(--surface); border:1px solid var(--rule); border-top:3px solid var(--blue); border-radius:10px; padding:16px 18px; font-size:.92em;}
+.card>h4, .card>h3{margin:0 0 4px; font-size:1.1em; font-weight:700; color:var(--blue);}
+.card>.tag{display:block; font-family:var(--mono); font-size:.8em; color:var(--ink-3); margin-bottom:10px;}
+.card>p{margin:0;} .card>p+p{margin-top:8px;}
+.card .row{display:flex; gap:8px; flex-wrap:wrap; font-size:.95em; margin:4px 0;} .card .row b{color:var(--ink-2);} .card .none{color:var(--ink-3); font-style:italic;}
+.card.amber{border-top-color:var(--amber);} .card.amber>h4, .card.amber>h3{color:var(--amber);}
+.card.green{border-top-color:var(--green);} .card.green>h4, .card.green>h3{color:var(--green);}
+.card.red{border-top-color:var(--red);} .card.red>h4, .card.red>h3{color:var(--red);}
+.card.violet{border-top-color:var(--violet);} .card.violet>h4, .card.violet>h3{color:var(--violet);}
+.card.teal{border-top-color:var(--teal);} .card.teal>h4, .card.teal>h3{color:var(--teal);}
+.card.pink{border-top-color:var(--pink);} .card.pink>h4, .card.pink>h3{color:var(--pink);}
+.card.orange{border-top-color:var(--orange);} .card.orange>h4, .card.orange>h3{color:var(--orange);}
+.card.sky{border-top-color:var(--sky);} .card.sky>h4, .card.sky>h3{color:var(--sky);}
+
+/* pílulas de rótulo inline com acento: <span class="pill teal">seed</span> */
+.pill{display:inline-block; font-family:var(--mono); font-size:.72em; letter-spacing:.04em; padding:2px 8px; border-radius:999px; border:1px solid currentColor; color:var(--blue); vertical-align:middle; margin:0 2px;}
+.pill.amber{color:var(--amber);} .pill.green{color:var(--green);} .pill.red{color:var(--red);} .pill.violet{color:var(--violet);} .pill.teal{color:var(--teal);} .pill.pink{color:var(--pink);} .pill.orange{color:var(--orange);} .pill.sky{color:var(--sky);} .pill.muted{color:var(--ink-3);}
+
+/* realce inline: <mark> */
+mark{background:color-mix(in srgb,var(--amber) 28%,transparent); color:inherit; padding:0 3px; border-radius:2px;}
+
+/* lista numerada com marcador em destaque (scopelist) */
+ol.numbered{list-style:none; padding:0; margin:18px 0;} ol.numbered li{display:flex; gap:14px; margin-bottom:12px;}
+ol.numbered .n{flex:none; width:28px; height:28px; border-radius:50%; display:grid; place-items:center; background:var(--blue-dim); color:var(--blue); font-family:var(--mono); font-size:.8em;}
+ol.numbered .name{font-weight:700;}
+ol.numbered .opt{font-family:var(--mono); font-size:.8em; color:var(--amber); margin-left:6px;}
+/* legenda em pílula (enumerações curtas: "scopes: 1 A · 2 B · 3 C") */
+.legend{display:inline-block; font-family:var(--mono); font-size:.8em; color:var(--ink-2); background:var(--surface); border:1px solid var(--rule); border-radius:999px; padding:8px 14px; margin:6px 0 18px;}
+.legend b{color:var(--green);}
+
+/* diagramas: área de pan/zoom e tela cheia */
+.pannable{overflow:hidden; cursor:grab; touch-action:none; user-select:none;}
+.pannable.dragging{cursor:grabbing;}
+.pannable svg{transition:transform .04s linear; will-change:transform; display:block;}
+/* tela cheia: o canvas ocupa a tela inteira; legenda e barra sobrepostas, legenda só ao passar o mouse */
+figure.diagram:fullscreen{background:var(--bg); margin:0; padding:0; display:block; border:0; position:relative; overflow:hidden;}
+figure.diagram:fullscreen .pannable{position:absolute; inset:0; height:100%; width:100%; display:block;}
+figure.diagram:fullscreen .pannable svg{position:absolute; left:0; top:0; margin:0;}
+figure.diagram:fullscreen figcaption{position:absolute; left:50%; bottom:64px; transform:translateX(-50%); max-width:min(80ch, 90vw); margin:0; padding:14px 18px; background:color-mix(in srgb,var(--surface) 92%,transparent); border:1px solid var(--rule); border-radius:10px; pointer-events:none;}
+/* legenda ocultável pelo botão da barra (em qualquer figura, dentro ou fora da tela cheia) */
+figure.diagram.cap-hidden figcaption{display:none;}
+figure.diagram:fullscreen .widget-host{position:absolute; left:16px; bottom:12px; z-index:2;}
+
+/* código inline com cor de destaque (como em renderizadores markdown) */
+:not(pre) > code{color:var(--orange); background:color-mix(in srgb,var(--orange) 9%,transparent); border-color:color-mix(in srgb,var(--orange) 25%,transparent);}
+.ref code, .toc code{color:inherit;}
+
+/* lista de símbolos/termos: badge mono à esquerda + explicação (ul.kv > li > span.sym + span) */
+ul.kv{list-style:none; padding:0; margin:18px 0;} ul.kv li{display:flex; gap:14px; align-items:flex-start; margin-bottom:12px;}
+ul.kv .sym{flex:none; min-width:52px; text-align:center; font-family:var(--mono); font-size:.85em; font-weight:600; color:var(--teal); background:color-mix(in srgb,var(--teal) 12%,transparent); border:1px solid color-mix(in srgb,var(--teal) 35%,transparent); border-radius:6px; padding:3px 8px;}
+
+/* ol.numbered: cor do marcador por item (li.amber, li.green…) e itens com título+corpo em bloco */
+ol.numbered li.amber .n{color:var(--amber); background:color-mix(in srgb,var(--amber) 16%,transparent);}
+ol.numbered li.green .n{color:var(--green); background:color-mix(in srgb,var(--green) 16%,transparent);}
+ol.numbered li.red .n{color:var(--red); background:color-mix(in srgb,var(--red) 16%,transparent);}
+ol.numbered li.violet .n{color:var(--violet); background:color-mix(in srgb,var(--violet) 16%,transparent);}
+ol.numbered li.teal .n{color:var(--teal); background:color-mix(in srgb,var(--teal) 16%,transparent);}
+ol.numbered li.pink .n{color:var(--pink); background:color-mix(in srgb,var(--pink) 16%,transparent);}
+ol.numbered li.orange .n{color:var(--orange); background:color-mix(in srgb,var(--orange) 16%,transparent);}
+ol.numbered li>div>p{margin:2px 0 0;} ol.numbered .name{display:block;}
+
+/* lista de dores dentro de box.warn: ✗ vermelho */
+.box ul.pains{list-style:none; padding:0; margin:8px 0 0;} .box ul.pains li{display:flex; gap:10px; margin-bottom:8px;} .box ul.pains .x{color:var(--red); font-weight:700; flex:none;}
+/* sem ligaduras em código: "->" deve aparecer como dois caracteres */
+code, pre, .mono, ul.kv .sym{font-variant-ligatures:none; font-feature-settings:"liga" 0, "calt" 0;}
+
+/* casos matemáticos lado a lado ou empilhados, cada um com cor de papel: div.cases > div.case.<cor> > h5 + p + .eq */
+.cases{display:grid; gap:14px; margin:22px 0;}
+.case{padding:14px 18px 6px; border-left:3px solid var(--blue); background:color-mix(in srgb,var(--blue) 6%,transparent); border-radius:0 10px 10px 0;}
+.case>h5{margin:0 0 6px; font-size:1em; font-weight:700; color:var(--blue);}
+.case>p{margin:0 0 6px;} .case .eq{margin:10px 0 12px;}
+.case.amber{border-left-color:var(--amber); background:color-mix(in srgb,var(--amber) 6%,transparent);} .case.amber>h5{color:var(--amber);}
+.case.green{border-left-color:var(--green); background:color-mix(in srgb,var(--green) 6%,transparent);} .case.green>h5{color:var(--green);}
+.case.red{border-left-color:var(--red); background:color-mix(in srgb,var(--red) 6%,transparent);} .case.red>h5{color:var(--red);}
+.case.violet{border-left-color:var(--violet); background:color-mix(in srgb,var(--violet) 6%,transparent);} .case.violet>h5{color:var(--violet);}
+.case.teal{border-left-color:var(--teal); background:color-mix(in srgb,var(--teal) 6%,transparent);} .case.teal>h5{color:var(--teal);}
+/* realce dentro de fórmulas KaTeX (\hlb, \hla, \hlg, \hlr, \hlv, \hlt) */
+.katex .hl-blue{color:var(--blue);} .katex .hl-amber{color:var(--amber);} .katex .hl-green{color:var(--green);} .katex .hl-red{color:var(--red);} .katex .hl-violet{color:var(--violet);} .katex .hl-teal{color:var(--teal);}
