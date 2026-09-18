@@ -35,9 +35,23 @@
     if (!pre) return;
     pre.classList.add('pannable');
     let drag: { sx: number; sy: number; ox: number; oy: number } | null = null;
-    const down = (e: PointerEvent) => { if (e.button !== 0) return; drag = { sx: e.clientX, sy: e.clientY, ox: x, oy: y }; pre!.setPointerCapture(e.pointerId); pre!.classList.add('dragging'); };
-    const move = (e: PointerEvent) => { if (!drag) return; x = drag.ox + e.clientX - drag.sx; y = drag.oy + e.clientY - drag.sy; apply(); };
-    const up = () => { drag = null; pre!.classList.remove('dragging'); };
+    // pinch: two active pointers; zoom around the midpoint by the ratio of distances
+    const pts = new Map<number, { x: number; y: number }>();
+    let pinch: { d: number } | null = null;
+    const dist = () => { const [a, b] = [...pts.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
+    const mid = () => { const [a, b] = [...pts.values()]; return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; };
+    const down = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); pre!.setPointerCapture(e.pointerId);
+      if (pts.size === 2) { drag = null; pinch = { d: dist() }; return; }
+      drag = { sx: e.clientX, sy: e.clientY, ox: x, oy: y }; pre!.classList.add('dragging');
+    };
+    const move = (e: PointerEvent) => {
+      if (pts.has(e.pointerId)) pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pinch && pts.size === 2) { const d = dist(); if (d > 0 && pinch.d > 0) { const m = mid(); zoom(d / pinch.d, m.x, m.y); } pinch.d = d; return; }
+      if (!drag) return; x = drag.ox + e.clientX - drag.sx; y = drag.oy + e.clientY - drag.sy; apply();
+    };
+    const up = (e: PointerEvent) => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; if (pts.size === 0) { drag = null; pre!.classList.remove('dragging'); } };
     const wheel = (e: WheelEvent) => { if (!full && !e.ctrlKey) return; e.preventDefault(); zoom(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX, e.clientY); };
     const onFull = () => { full = document.fullscreenElement === figure; if (full) { setCap(false); requestAnimationFrame(() => requestAnimationFrame(fit)); } else { setCap(true); reset(); } };
     pre.addEventListener('pointerdown', down); pre.addEventListener('pointermove', move); pre.addEventListener('pointerup', up); pre.addEventListener('pointercancel', up);

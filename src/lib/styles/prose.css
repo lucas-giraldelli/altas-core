@@ -179,7 +179,8 @@ ol.numbered .opt{font-family:var(--mono); font-size:.8em; color:var(--amber); ma
 .legend b{color:var(--green);}
 
 /* diagramas: área de pan/zoom e tela cheia */
-.pannable{overflow:hidden; cursor:grab; touch-action:none; user-select:none;}
+.pannable{overflow:hidden; cursor:grab; touch-action:pan-y; user-select:none;}  /* inline: vertical scroll stays native; pinch and horizontal drag are handled */
+figure.diagram:fullscreen .pannable{touch-action:none;}
 .pannable.dragging{cursor:grabbing;}
 .pannable svg{transition:transform .04s linear; will-change:transform; display:block;}
 /* tela cheia: o canvas ocupa a tela inteira; legenda e barra sobrepostas, legenda só ao passar o mouse */
