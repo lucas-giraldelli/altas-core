@@ -23,16 +23,7 @@ main{
   padding:60px 64px 140px;
   max-width:calc(var(--measure) + 128px);
 }
-/* blocos largos (cards, diagramas, tabelas, código) "sangram" simetricamente além da coluna de texto, até --wide */
-@media (min-width:1100px){
-  main .cards, main figure, main .table-wrap, main pre{
-    --w:min(var(--wide), calc(100vw - var(--toc-w) - 120px));
-    width:var(--w); margin-left:calc((100% - var(--w)) / 2);
-  }
-  :root[data-toc="closed"] main .cards, :root[data-toc="closed"] main figure, :root[data-toc="closed"] main .table-wrap, :root[data-toc="closed"] main pre{ --w:min(var(--wide), calc(100vw - 120px)); }
-  main .cards{ --w:min(var(--wide), calc(100vw - var(--toc-w) - 120px), 100%); }
-  main .cards:has(> :nth-child(3)){ --w:min(var(--wide), calc(100vw - var(--toc-w) - 120px)); }
-}
+/* blocos (cards, diagramas, tabelas, código) respeitam a coluna de texto; conteúdo mais largo rola dentro do bloco */
 
 .doc-head{margin-bottom:64px;}
 h1{
