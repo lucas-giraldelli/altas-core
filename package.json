@@ -45,7 +45,7 @@
     "@lucide/svelte": "^1.0.0",
     "highlight.js": "^11.0.0",
     "katex": "^0.16.0",
-    "mermaid": "^11.0.0"
+    "mermaid": ">=11.0.0"
   },
   "devDependencies": {
     "@sveltejs/adapter-auto": "^7.0.1",
