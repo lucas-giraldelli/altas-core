@@ -7,7 +7,7 @@ const LANGS: Record<string, () => Promise<any>> = {
   php: () => import('highlight.js/lib/languages/php'), python: () => import('highlight.js/lib/languages/python'), py: () => import('highlight.js/lib/languages/python'),
   sql: () => import('highlight.js/lib/languages/sql'), bash: () => import('highlight.js/lib/languages/bash'), sh: () => import('highlight.js/lib/languages/bash'), shell: () => import('highlight.js/lib/languages/bash'),
   json: () => import('highlight.js/lib/languages/json'), yaml: () => import('highlight.js/lib/languages/yaml'), yml: () => import('highlight.js/lib/languages/yaml'),
-  html: () => import('highlight.js/lib/languages/xml'), xml: () => import('highlight.js/lib/languages/xml'), css: () => import('highlight.js/lib/languages/css'),
+  html: () => import('highlight.js/lib/languages/xml'), xml: () => import('highlight.js/lib/languages/xml'), svelte: () => import('highlight.js/lib/languages/xml'), vue: () => import('highlight.js/lib/languages/xml'), css: () => import('highlight.js/lib/languages/css'),
   go: () => import('highlight.js/lib/languages/go'), rust: () => import('highlight.js/lib/languages/rust'), c: () => import('highlight.js/lib/languages/c'), cpp: () => import('highlight.js/lib/languages/cpp'),
   java: () => import('highlight.js/lib/languages/java'), kotlin: () => import('highlight.js/lib/languages/kotlin'), swift: () => import('highlight.js/lib/languages/swift'), dockerfile: () => import('highlight.js/lib/languages/dockerfile'), nginx: () => import('highlight.js/lib/languages/nginx'), ini: () => import('highlight.js/lib/languages/ini'), diff: () => import('highlight.js/lib/languages/diff'), markdown: () => import('highlight.js/lib/languages/markdown'), md: () => import('highlight.js/lib/languages/markdown')
 };
@@ -17,6 +17,8 @@ export const highlight: Enhancer = async (root) => {
   const { default: hljs } = await import('highlight.js/lib/core');
   const need = new Set(blocks.map((c) => (c.parentElement!.dataset.lang || c.className.match(/language-([\w-]+)/)?.[1] || '').toLowerCase()).filter((l) => LANGS[l]));
   await Promise.all([...need].map(async (l) => { if (!hljs.getLanguage(l)) hljs.registerLanguage(l, (await LANGS[l]()).default); }));
+  // svelte/vue: HTML com <script> em JS/TS; o grammar xml delega ao javascript quando este está registrado
+  if ((need.has('svelte') || need.has('vue')) && !hljs.getLanguage('javascript')) hljs.registerLanguage('javascript', (await LANGS.javascript()).default);
   for (const code of blocks) {
     const lang = (code.parentElement!.dataset.lang || code.className.match(/language-([\w-]+)/)?.[1] || '').toLowerCase();
     if (!hljs.getLanguage(lang) || code.dataset.highlighted) continue;
