@@ -4,9 +4,15 @@ Core of Atlas, a personal knowledge base built from plain didactic HTML pages. T
 
 The repository accepts no issues or pull requests. It is published as reference and for reuse.
 
-## Installation
+## Quick start
 
-A complete, agent-oriented walkthrough from an empty folder to a served site is in [`docs/INSTALL.md`](docs/INSTALL.md).
+```sh
+pnpm dlx github:lucas-giraldelli/atlas-core my-atlas
+```
+
+creates a complete instance (PIN gate, notes, LLM-graded checklist, reading position, worker, PDF export, tests) from the template shipped in the package. The step-by-step, including the core-only path for a static reading site, is in [`docs/INSTALL.md`](docs/INSTALL.md).
+
+## Installation (library only)
 
 ```sh
 pnpm add github:lucas-giraldelli/atlas-core

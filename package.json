@@ -16,6 +16,8 @@
     "docs",
     "scripts",
     "skill",
+    "template",
+    "bin",
     "!dist/**/*.test.*",
     "!dist/**/*.spec.*"
   ],
@@ -76,5 +78,8 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lucas-giraldelli/atlas-core.git"
+  },
+  "bin": {
+    "create-atlas": "bin/create-atlas.mjs"
   }
 }

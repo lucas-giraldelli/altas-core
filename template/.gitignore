@@ -1,0 +1,16 @@
+node_modules/
+build/
+.svelte-kit/
+static/raw/
+.claude/
+pb_data/
+secrets.env
+.env.local
+test-results/
+playwright-report/
+.pdf-cache/
+secrets.env
+pb_data/
+.pdf-cache/
+static/raw/
+build/
