@@ -6,6 +6,8 @@ The repository accepts no issues or pull requests. It is published as reference 
 
 ## Installation
 
+A complete, agent-oriented walkthrough from an empty folder to a served site is in [`docs/INSTALL.md`](docs/INSTALL.md).
+
 ```sh
 pnpm add github:lucas-giraldelli/atlas-core
 pnpm add svelte mermaid katex highlight.js @lucide/svelte
