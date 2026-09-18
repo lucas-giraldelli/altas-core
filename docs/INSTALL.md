@@ -209,6 +209,10 @@ server {
 
 Build output changes hashes on every build, so `_app/` can be cached forever; HTML must not be.
 
+## 11. Writing pages with an agent
+
+Install the skill shipped in the package (`skill/learn/`) into the agent's skill folder and ask for `/learn leitura <topic>`; it writes a page in `content/`, builds and commits. See the README section "Writing pages: the /learn skill".
+
 ## Going further
 
 A personal instance usually adds a small backend for what a static site cannot hold: notes per section, a checklist with answers graded by a language model, reading position synced between devices, archived and read flags, display names and order of groups, and a queue for a worker that writes new pages or moves files on disk. PocketBase (one binary, SQLite) is enough for all of it: collections for `notes`, `progress`, `overrides`, `groups`, `requests` and `aliases`, a JS hook for the grading endpoint, and a Node worker on the machine that owns the git repository. The core has no dependency on any of this; it only needs the HTML files and the two components shown above. Widgets that need a backend are mounted into the rendered page with `mountIn(root, selector, Component, props)` after `enhance` has run.

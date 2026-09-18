@@ -51,6 +51,20 @@ Rendering a page:
 <Diagrams target={root} />
 ```
 
+## Writing pages: the /learn skill
+
+Pages are meant to be written by a coding agent. `skill/learn/` holds the authoring skill used for Atlas: three modes chosen by purpose (reference, reading, workbook), a textbook register with explicit prohibitions, the page structure, color roles, KaTeX and Mermaid rules, and the output steps (category, slug, build, commit). Install it as a skill of the agent in use, for example:
+
+```sh
+mkdir -p ~/.claude/skills && cp -r node_modules/@lucasgiraldelli/atlas-core/skill/learn ~/.claude/skills/learn
+```
+
+Then `/learn leitura <topic or URL>` writes a page into `content/`. The skill is in Portuguese; the pages it writes follow the language of the request (`--en` for English).
+
+## Interactive check with an LLM
+
+`docs/INTERACTIVE-CHECK.md` describes the optional layer that grades the reader's explanations against the referenced section: PocketBase collection, the grading hook with the model key kept server-side, and the client widget mounted with `mountIn`.
+
 ## Page contract
 
 A page is a plain HTML file with `<head>` metadata (`title`, `description`, `atlas-mode`, `atlas-source`, `atlas-date`) and a `<main>` using the component vocabulary described in [`docs/PAGE-CONTRACT.md`](docs/PAGE-CONTRACT.md). A starting point is in [`docs/page-template.html`](docs/page-template.html). Pages contain no styles or scripts.

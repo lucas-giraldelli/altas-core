@@ -15,6 +15,7 @@
     "dist",
     "docs",
     "scripts",
+    "skill",
     "!dist/**/*.test.*",
     "!dist/**/*.spec.*"
   ],
