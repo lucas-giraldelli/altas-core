@@ -237,7 +237,7 @@ code, pre, .mono, ul.kv .sym{font-variant-ligatures:none; font-feature-settings:
   main { max-width: none !important; padding: 0 !important; }
   body { background: #fff !important; color: #111 !important; }
   a { color: inherit; text-decoration: none; }
-  section.topic, figure.diagram, .box, .cards, pre, table { break-inside: avoid; }
+  figure.diagram, .box, .card, pre, tr { break-inside: avoid; }
   h2, h3 { break-after: avoid; }
   .mermaid svg { max-width: 100% !important; height: auto !important; }
   pre { white-space: pre-wrap; word-break: break-word; }
