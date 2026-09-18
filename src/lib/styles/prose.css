@@ -227,3 +227,22 @@ code, pre, .mono, ul.kv .sym{font-variant-ligatures:none; font-feature-settings:
 .case.teal{border-left-color:var(--teal); background:color-mix(in srgb,var(--teal) 6%,transparent);} .case.teal>h5{color:var(--teal);}
 /* realce dentro de fórmulas KaTeX (\hlb, \hla, \hlg, \hlr, \hlv, \hlt) */
 .katex .hl-blue{color:var(--blue);} .katex .hl-amber{color:var(--amber);} .katex .hl-green{color:var(--green);} .katex .hl-red{color:var(--red);} .katex .hl-violet{color:var(--violet);} .katex .hl-teal{color:var(--teal);}
+
+/* impressão / PDF: só o documento, em claro, com resoluções visíveis e sem interface */
+@media print, (prefers-print) {
+  :root { --toc-w: 0px; }
+  .topbar, #toc, #toc-btn, #progress, .dtools, .btn.reveal, .ex-actions, .widget-host, .done, .ci .tick, .ci .explain, .ci .panel, .scrim, .sheet { display: none !important; }
+  .panel[hidden] { display: block !important; }
+  .reading { padding-left: 0 !important; }
+  main { max-width: none !important; padding: 0 !important; }
+  body { background: #fff !important; color: #111 !important; }
+  a { color: inherit; text-decoration: none; }
+  section.topic, figure.diagram, .box, .cards, pre, table { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  .mermaid svg { max-width: 100% !important; height: auto !important; }
+  pre { white-space: pre-wrap; word-break: break-word; }
+}
+html[data-print] .topbar, html[data-print] #toc, html[data-print] #toc-btn, html[data-print] #progress, html[data-print] .dtools, html[data-print] .btn.reveal, html[data-print] .ex-actions, html[data-print] .widget-host, html[data-print] .done, html[data-print] .ci .tick, html[data-print] .ci .explain, html[data-print] .ci .panel { display: none !important; }
+html[data-print] .panel[hidden] { display: block !important; }
+html[data-print] .reading { padding-left: 0 !important; }
+html[data-print] main { max-width: none !important; padding: 24px 0 !important; }
