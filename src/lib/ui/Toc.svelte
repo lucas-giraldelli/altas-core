@@ -67,7 +67,7 @@
 {/if}
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
-<nav id="toc" class:open bind:this={nav} aria-label={L.label} onclick={(e) => { if ((e.target as HTMLElement).tagName === 'A' && innerWidth <= 900) open = false; }}>
+<nav id="toc" class:open bind:this={nav} aria-label={L.label} onclick={(e) => { const a = (e.target as HTMLElement).closest('a[href^="#"]'); if (!a) return; if (innerWidth <= 900) open = false; const el = document.getElementById(a.getAttribute('href')!.slice(1)); if (el) { e.preventDefault(); history.replaceState(null, '', a.getAttribute('href')); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }}>
   <div class="toc-head">
     <a class="icon" href={home} title={L.back} aria-label={L.back}><ArrowLeft size={18} /></a>
     <button type="button" class="icon" title={L.hide} aria-label={L.hide} onclick={toggle}><PanelLeftClose size={18} /></button>

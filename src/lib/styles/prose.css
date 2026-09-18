@@ -1,6 +1,6 @@
 /* base + prosa do conteúdo: tipografia, boxes, steps, tabelas, figuras, mermaid, citações */
 *{box-sizing:border-box;}
-html{scroll-behavior:smooth; scroll-padding-top:30px;}
+html{scroll-padding-top:30px;} /* sem scroll-behavior:smooth: restauração de posição e navegação são secas; o índice anima por conta própria */
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto;}
   *{transition:none !important;}
