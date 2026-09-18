@@ -24,6 +24,8 @@ main{
   max-width:calc(var(--measure) + 128px);
 }
 /* blocos (cards, diagramas, tabelas, código) respeitam a coluna de texto; conteúdo mais largo rola dentro do bloco */
+main, main .box, main .card, main .steps, main .ex-body, main li, main figure{min-width:0;}
+main pre, main .table-wrap, main figure{max-width:100%; overflow-x:auto;}
 
 .doc-head{margin-bottom:64px;}
 h1{
@@ -167,7 +169,7 @@ pre .kw{color:var(--blue);} pre .fn{color:var(--amber);} pre .str{color:var(--gr
 mark{background:color-mix(in srgb,var(--amber) 28%,transparent); color:inherit; padding:0 3px; border-radius:2px;}
 
 /* lista numerada com marcador em destaque (scopelist) */
-ol.numbered{list-style:none; padding:0; margin:18px 0;} ol.numbered li{display:flex; gap:14px; margin-bottom:12px;}
+ol.numbered{list-style:none; padding:0; margin:18px 0;} ol.numbered li{display:flex; gap:14px; margin-bottom:12px;} ol.numbered li>*:not(.n){min-width:0; flex:1 1 auto;}
 ol.numbered .n{flex:none; width:28px; height:28px; border-radius:50%; display:grid; place-items:center; background:var(--blue-dim); color:var(--blue); font-family:var(--mono); font-size:.8em;}
 ol.numbered .name{font-weight:700;}
 ol.numbered .opt{font-family:var(--mono); font-size:.8em; color:var(--amber); margin-left:6px;}
