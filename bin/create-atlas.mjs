@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Cria uma instância do Atlas a partir do template embutido no pacote.
-// Uso: pnpm dlx github:lucas-giraldelli/atlas-core my-atlas   (ou: npx github:lucas-giraldelli/atlas-core my-atlas)
+// Uso: pnpm dlx --allow-build=@lucasgiraldelli/atlas-core github:lucas-giraldelli/atlas-core my-atlas
 import { cpSync, existsSync, readdirSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,7 +18,7 @@ Próximos passos:
   docker compose up -d                      # nginx (4173) + PocketBase (8090)
   set -a; . ./secrets.env; set +a; node scripts/pb-setup.mjs   # coleções e usuário (PIN = PB_PASS)
   pnpm build                                # site em build/, PDFs em build/pdf/
-  open http://localhost:4173                # PIN: o valor de PB_PASS
+  open http://localhost:4173                # PIN: o valor de PB_PIN
 
 Guia completo: node_modules/@lucasgiraldelli/atlas-core/docs/INSTALL.md
 `);

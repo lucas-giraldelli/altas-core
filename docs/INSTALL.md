@@ -15,7 +15,7 @@ Every step is a command or a complete file. This guide is written so that a codi
 ### 2. Create
 
 ```sh
-pnpm dlx github:lucas-giraldelli/atlas-core my-atlas
+pnpm dlx --allow-build=@lucasgiraldelli/atlas-core github:lucas-giraldelli/atlas-core my-atlas
 cd my-atlas
 cp secrets.env.example secrets.env
 ```

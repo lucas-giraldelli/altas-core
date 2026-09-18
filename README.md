@@ -7,7 +7,7 @@ The repository accepts no issues or pull requests. It is published as reference 
 ## Quick start
 
 ```sh
-pnpm dlx github:lucas-giraldelli/atlas-core my-atlas
+pnpm dlx --allow-build=@lucasgiraldelli/atlas-core github:lucas-giraldelli/atlas-core my-atlas
 ```
 
 creates a complete instance (PIN gate, notes, LLM-graded checklist, reading position, worker, PDF export, tests) from the template shipped in the package. The step-by-step, including the core-only path for a static reading site, is in [`docs/INSTALL.md`](docs/INSTALL.md).
