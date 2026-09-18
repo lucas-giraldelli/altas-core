@@ -33,7 +33,11 @@
     "./styles.css": "./dist/styles/index.css",
     "./styles/*": "./dist/styles/*",
     "./tokens.css": "./dist/theme/tokens.css",
-    "./page-template.html": "./docs/page-template.html"
+    "./page-template.html": "./docs/page-template.html",
+    "./content": {
+      "types": "./dist/content/loader.d.ts",
+      "default": "./dist/content/loader.js"
+    }
   },
   "peerDependencies": {
     "svelte": "^5.0.0",
