@@ -25,7 +25,8 @@ main{
 }
 /* blocos (cards, diagramas, tabelas, código) respeitam a coluna de texto; conteúdo mais largo rola dentro do bloco */
 main, main .box, main .card, main .steps, main .ex-body, main li, main figure{min-width:0;}
-main pre, main .table-wrap, main figure{max-width:100%; overflow-x:auto;}
+main pre, main .table-wrap, main figure, main .eq{max-width:100%; overflow-x:auto;}
+main .cards>*, main .steps>*, main ul.kv>li>*, main .ex>*{min-width:0;}
 
 .doc-head{margin-bottom:64px;}
 h1{
@@ -214,7 +215,7 @@ ol.numbered li>div>p{margin:2px 0 0;} ol.numbered .name{display:block;}
 code, pre, .mono, ul.kv .sym{font-variant-ligatures:none; font-feature-settings:"liga" 0, "calt" 0;}
 
 /* casos matemáticos lado a lado ou empilhados, cada um com cor de papel: div.cases > div.case.<cor> > h5 + p + .eq */
-.cases{display:grid; gap:14px; margin:22px 0;}
+.cases{display:grid; grid-template-columns:minmax(0,1fr); gap:14px; margin:22px 0;} .cases>.case{min-width:0;}
 .case{padding:14px 18px 6px; border-left:3px solid var(--blue); background:color-mix(in srgb,var(--blue) 6%,transparent); border-radius:0 10px 10px 0;}
 .case>h5{margin:0 0 6px; font-size:1em; font-weight:700; color:var(--blue);}
 .case>p{margin:0 0 6px;} .case .eq{margin:10px 0 12px;}
