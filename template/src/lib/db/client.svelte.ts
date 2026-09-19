@@ -1,6 +1,6 @@
-/** PocketBase: camada do usuário por cima do conteúdo estático. Uma credencial: e-mail fixo + PIN (senha). */
+/** PocketBase: camada do usuário por cima do conteúdo estático. Cada pessoa tem um usuário (username) e um PIN (senha); o gate só pede o PIN e testa contra cada usuário. */
 import PocketBase from 'pocketbase';
-import { PUBLIC_PB_URL, PUBLIC_PB_EMAIL } from '$env/static/public';
+import { PUBLIC_PB_URL, PUBLIC_PB_USERS } from '$env/static/public';
 import { browser } from '$app/environment';
 
 export const pb = new PocketBase(PUBLIC_PB_URL);
@@ -13,7 +13,15 @@ if (browser) pb.authStore.onChange(() => {
   if (pb.authStore.isValid) document.cookie = `atlas_token=${pb.authStore.token}; Path=/; Max-Age=${30 * 24 * 3600}; SameSite=Lax; Secure`;
 });
 
-export const loginWithPin = (pin: string) => pb.collection('users').authWithPassword(PUBLIC_PB_EMAIL, pin);
+export const USERS = PUBLIC_PB_USERS.split(',').map((s) => s.trim()).filter(Boolean);
+export async function loginWithPin(pin: string) {
+  let last: unknown;
+  for (const u of USERS) { try { return await pb.collection('users').authWithPassword(u, pin); } catch (e) { last = e; } }
+  throw last;
+}
+/** id do usuário logado (dono dos registros pessoais) */
+export const me = () => pb.authStore.record?.id ?? '';
+export const myName = () => (pb.authStore.record as { username?: string } | null)?.username ?? '';
 export const logout = () => pb.authStore.clear();
 
 /** falha silenciosa: sem API (offline, rota ausente) o site continua só leitura */

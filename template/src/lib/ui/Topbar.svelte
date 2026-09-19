@@ -5,14 +5,14 @@
   import { getScale, setScale, ModeToggle } from '@lucasgiraldelli/atlas-core';
   import { page } from '$app/state';
   import { find } from '$lib/content';
-  import { getOverride, saveOverride } from '$lib/db/overrides';
+  import { getState, saveState } from '$lib/db/state';
   let scale = $state(1), open = $state(false), read = $state<boolean | null>(null), armed = $state(false);
   function toggleMenu() { open = !open; armed = false; if (open) setTimeout(() => (armed = true), 350); }
   const slug = $derived(page.url.pathname.replace(/^\/|\/$/g, ''));
   const onPage = $derived(!!slug && !slug.startsWith('gate') && !!find(slug));
   onMount(() => { scale = getScale(); });
-  $effect(() => { if (onPage && auth.ok) getOverride(slug).then((o) => (read = !!o?.read)); else read = null; });
-  async function toggleRead() { const o = await saveOverride(slug, { read: !read }); read = !!o.read; }
+  $effect(() => { if (onPage && auth.ok) getState(slug).then((o) => (read = !!o?.read)); else read = null; });
+  async function toggleRead() { const o = await saveState(slug, { read: !read }); read = !!o.read; }
   // PDF pré-gerado no build (build/pdf/<slug>.pdf): compartilha (mobile) ou baixa; sem PDF, cai na impressão do navegador
   let sharing = $state(false);
   const canShare = typeof navigator !== 'undefined' && !!navigator.share && !!navigator.canShare;

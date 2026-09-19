@@ -1,12 +1,15 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { afterNavigate } from '$app/navigation';
-  import { Pencil, Check, X, ArrowUp, ArrowDown, FolderInput, Plus, Archive, ArchiveRestore, BookCheck, BookOpen, MoreVertical, History, Trash2, ChevronRight, GripVertical, ArrowUpDown, BookMarked } from '@lucide/svelte';
+  import { Pencil, Check, X, ArrowUp, ArrowDown, FolderInput, Plus, Archive, ArchiveRestore, BookCheck, BookOpen, MoreVertical, History, Trash2, ChevronRight, GripVertical, ArrowUpDown, BookMarked, Users } from '@lucide/svelte';
   import { byCat, type Page } from '$lib/content';
   import { kebab } from '$lib/content/slug';
   import { auth } from '$lib/db/client.svelte';
   import { listOverrides, saveOverride, listGroups, saveGroup, deleteGroup, type Override, type Group } from '$lib/db/overrides';
   import { enqueueFs } from '$lib/db/requests';
+  import { listStates, saveState, type DocState } from '$lib/db/state';
+  import { me, USERS } from '$lib/db/client.svelte';
+  import { pb } from '$lib/db/client.svelte';
   import { listAllProgress } from '$lib/db/progress';
   import AskAtlas from '$lib/ui/AskAtlas.svelte';
   import RequestList from '$lib/ui/RequestList.svelte';
@@ -39,24 +42,37 @@
   let draft = $state('');
   let showArchived = $state(false);
   let ready = $state(false);
+  // estado pessoal (lido/arquivado/posição) por documento, do usuário logado
+  let st = $state<Record<string, DocState>>({});
+  // documentos de outra pessoa (overrides.owner) ficam fora da home, a menos que "ver todos" esteja ligado
+  let showAll = $state(false);
+  const owned = (p: Page) => ov[p.slug]?.owner || '';
+  const mine = (p: Page) => !owned(p) || owned(p) === me() || showAll;
+  const nHidden = $derived(allPages.filter((p) => owned(p) && owned(p) !== me()).length);
+  // usuários conhecidos (para atribuir dono): id → username, carregado do PocketBase
+  let people = $state<{ id: string; username: string }[]>([]);
   // última página aberta (overrides.opened), para retomar de onde parou
-  const last = $derived.by(() => { let best: Override | null = null; for (const o of Object.values(ov)) if (o.opened && !o.archived && (!best || o.opened > best.opened) && allPages.some((x) => x.slug === o.slug)) best = o; return best ? allPages.find((x) => x.slug === best!.slug)! : null; });          // lista só aparece com overrides/grupos carregados (sem flick de recolher)
+  const last = $derived.by(() => { let best: DocState | null = null; for (const s of Object.values(st)) if (s.opened && !s.archived && (!best || s.opened > best.opened) && allPages.some((x) => x.slug === s.slug)) best = s; return best ? allPages.find((x) => x.slug === best!.slug)! : null; });          // lista só aparece com overrides/grupos carregados (sem flick de recolher)
 
   afterNavigate(() => scrollTo(0, 0));
   onMount(async () => {
     scrollTo(0, 0); // a home abre sempre no topo, mesmo voltando pelo histórico
     const ovs = await listOverrides(); const grs = await listGroups();
     if (ovs.length || grs.length) { ov = Object.fromEntries(ovs.map((o) => [o.slug, o])); gr = Object.fromEntries(grs.map((g) => [g.path, g])); remember('atlas-ov-cache', ov); remember('atlas-gr-cache', gr); }
+    st = Object.fromEntries((await listStates()).map((s) => [s.slug, s]));
     ready = true;
     for (const pr of await listAllProgress()) if (pr.done) doneCount[pr.slug] = (doneCount[pr.slug] ?? 0) + 1;
+    try { people = (await pb.collection('users').getFullList<{ id: string; username: string }>()).map((u) => ({ id: u.id, username: u.username })); } catch {}
   });
 
   const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   const title = (p: Page) => (ov[p.slug]?.title || p.title).replace(/\s*\(EN\)\s*$/, '');
   // rota segue o título: renomeou, a URL vira o kebab do novo título (a antiga continua como alias)
   const href = (p: Page) => p.raw ? `/raw/${p.slug}.html` : ov[p.slug]?.title ? `/${p.slug.split('/').slice(0, -1).concat(kebab(ov[p.slug].title)).join('/')}/` : `/${p.slug}/`;
-  const archived = (p: Page) => !!ov[p.slug]?.archived;
-  const isRead = (p: Page) => !!ov[p.slug]?.read;
+  const archived = (p: Page) => !!st[p.slug]?.archived;
+  const isRead = (p: Page) => !!st[p.slug]?.read;
+  async function saveSt(p: Page, data: Partial<DocState>) { st[p.slug] = await saveState(p.slug, data); }
+  async function setOwner(p: Page, owner: string) { await save(p, { owner }); moving = null; }
   let menuFor = $state<string | null>(null); // menu de ações (3 pontos) aberto para este slug
   let menuArmed = $state(false);
   // categorias/subcategorias recolhidas: no PocketBase (groups.collapsed), sincronizado entre aparelhos
@@ -70,13 +86,13 @@
   const gname = (path: string) => gr[path]?.title || path.split('/').pop()!;
   const gorder = (path: string) => gr[path]?.order ?? 1000;
   const visible = (list: Page[]) =>
-    list.filter((p) => archived(p) === showArchived && (!q || norm(`${title(p)} ${p.description} ${p.cat} ${subOf(p)}`).includes(norm(q))))
+    list.filter((p) => mine(p) && archived(p) === showArchived && (!q || norm(`${title(p)} ${p.description} ${p.cat} ${subOf(p)}`).includes(norm(q))))
         .sort((a, b) => order(a) - order(b) || title(a).localeCompare(title(b), 'pt-BR'));
   // raiz primeiro, depois subcategorias em ordem alfabética pelo nome exibido
   const subsOf = (list: Page[], cat?: string) => [...new Set([...list.map(subOf), ...(cat ? Object.keys(gr).filter((k) => k.startsWith(cat + '/')).map((k) => k.slice(cat.length + 1)) : [])])].sort((a, b) => (a === '') !== (b === '') ? (a === '' ? -1 : 1) : gorder(`${cat}/${a}`) - gorder(`${cat}/${b}`) || gname(`${cat}/${a}`).localeCompare(gname(`${cat}/${b}`), 'pt-BR'));
   const all = allPages;
-  const total = $derived(all.filter((p) => !archived(p)).length);
-  const nArchived = $derived(all.filter((p) => archived(p)).length);
+  const total = $derived(all.filter((p) => mine(p) && !archived(p)).length);
+  const nArchived = $derived(all.filter((p) => mine(p) && archived(p)).length);
 
   // Conflito de nome: uma página por caminho no disco. Verifica antes de gravar a intenção.
   const taken = (slug: string, except?: string) => allPages.some((x) => x.slug === slug && x.slug !== except) || Object.values(ov).some((o) => o.title && o.slug !== except && `${o.slug.split('/').slice(0, -1).join('/')}/${kebab(o.title)}` === slug);
@@ -133,7 +149,7 @@
     {#if showArchived}<p class="deck">{nArchived} página(s) arquivada(s).</p>{/if}
   </div>
   {#if last && !showArchived}
-    <a class="resume" href={href(last)}><BookMarked size={16} /><span><i>Continuar</i>{title(last)}</span><em>{#if last.checklist}<b class:full={(doneCount[last.slug] ?? 0) >= last.checklist}>{doneCount[last.slug] ?? 0}/{last.checklist}</b> · {/if}{Math.round((ov[last.slug]?.pos ?? 0) * 100)}%</em></a>
+    <a class="resume" href={href(last)}><BookMarked size={16} /><span><i>Continuar</i>{title(last)}</span><em>{#if last.checklist}<b class:full={(doneCount[last.slug] ?? 0) >= last.checklist}>{doneCount[last.slug] ?? 0}/{last.checklist}</b> · {/if}{Math.round((st[last.slug]?.pos ?? 0) * 100)}%</em></a>
   {/if}
   <div class="bar">
     <input class="search" type="search" placeholder="Buscar…" bind:value={q} />
@@ -141,6 +157,7 @@
       <AskAtlas cats={Object.keys(cats).flatMap((c) => [c, ...subsOf(cats[c], c).filter(Boolean).map((s) => `${c}/${s}`)])} onSent={() => { reqTick++; showHistory = true; autoOpened = true; }} />
       <button class="toggle" type="button" aria-pressed={showHistory} onclick={() => { showHistory = !showHistory; autoOpened = false; clearTimeout(dismissTimer); }} title="Histórico de pedidos" aria-label="Histórico de pedidos"><History size={18} />{#if pendingReqs}<span class="count">{pendingReqs}</span>{/if}</button>
     {/if}
+    {#if nHidden}<button class="toggle" type="button" aria-pressed={showAll} onclick={() => (showAll = !showAll)} title={showAll ? 'Só os meus e compartilhados' : `Ver também os de outras pessoas (${nHidden})`} aria-label="Ver todos"><Users size={18} /></button>{/if}
     <button class="toggle" type="button" aria-pressed={showArchived} onclick={() => (showArchived = !showArchived)} title={showArchived ? 'Voltar aos ativos' : `Arquivados (${nArchived})`} aria-label="Arquivados">
       {#if showArchived}<ArchiveRestore size={18} />{:else}<Archive size={18} />{/if}
       {#if nArchived && !showArchived}<span class="count">{nArchived}</span>{/if}
@@ -228,7 +245,7 @@
               {:else}
                 <a href={href(p)} data-sveltekit-reload={p.raw || undefined} onclick={(e) => { e.stopPropagation(); menuFor = null; }}>
                   <span class="ttl">{#if isRead(p)}<BookCheck size={14} class="readmark" />{/if}{title(p)}{#if p.en}<span class="lang">EN</span>{/if}</span>
-                  <span class="meta">{#if p.checklist}<span class="prog" class:full={(doneCount[p.slug] ?? 0) >= p.checklist}>{doneCount[p.slug] ?? 0}/{p.checklist}</span>{' · '}{/if}{[p.mode, p.date].filter(Boolean).join(' · ')}</span>
+                  <span class="meta">{#if owned(p)}<span class="pill muted">{people.find((u) => u.id === owned(p))?.username ?? 'privado'}</span>{' · '}{/if}{#if p.checklist}<span class="prog" class:full={(doneCount[p.slug] ?? 0) >= p.checklist}>{doneCount[p.slug] ?? 0}/{p.checklist}</span>{' · '}{/if}{[p.mode, p.date].filter(Boolean).join(' · ')}</span>
                 </a>
                 {#if auth.ok}
                   <button type="button" class="more" title="Ações" aria-label="Ações" aria-expanded={menuFor === p.slug} onclick={() => openMenu(p.slug)}><MoreVertical size={16} /></button>
@@ -237,8 +254,8 @@
                     <button type="button" title="Mover para outra subcategoria" onclick={() => { moving = p.slug; draft = subOf(p); menuFor = null; }}><FolderInput size={14} /></button>
                     <button type="button" title="Subir" onclick={() => move(p, cats[cat], -1)}><ArrowUp size={14} /></button>
                     <button type="button" title="Descer" onclick={() => move(p, cats[cat], 1)}><ArrowDown size={14} /></button>
-                    <button type="button" title={archived(p) ? 'Desarquivar' : 'Arquivar'} onclick={() => { save(p, { archived: !archived(p) }); menuFor = null; }}>{#if archived(p)}<ArchiveRestore size={14} />{:else}<Archive size={14} />{/if}</button>
-                    <button type="button" title={isRead(p) ? 'Marcar como não lido' : 'Marcar como lido'} onclick={() => { save(p, { read: !isRead(p) }); menuFor = null; }}>{#if isRead(p)}<BookOpen size={14} />{:else}<BookCheck size={14} />{/if}</button>
+                    <button type="button" title={archived(p) ? 'Desarquivar' : 'Arquivar'} onclick={() => { saveSt(p, { archived: !archived(p) }); menuFor = null; }}>{#if archived(p)}<ArchiveRestore size={14} />{:else}<Archive size={14} />{/if}</button>
+                    <button type="button" title={isRead(p) ? 'Marcar como não lido' : 'Marcar como lido'} onclick={() => { saveSt(p, { read: !isRead(p) }); menuFor = null; }}>{#if isRead(p)}<BookOpen size={14} />{:else}<BookCheck size={14} />{/if}</button>
                   </span>
                 {/if}
               {/if}
@@ -269,8 +286,8 @@
         <button type="button" onclick={() => { moving = p.slug; menuFor = null; }}><FolderInput size={18} /> Mover para outra categoria</button>
         <button type="button" onclick={() => move(p, cats[catOf(p)], -1)}><ArrowUp size={18} /> Subir</button>
         <button type="button" onclick={() => move(p, cats[catOf(p)], 1)}><ArrowDown size={18} /> Descer</button>
-        <button type="button" onclick={() => { save(p, { archived: !archived(p) }); menuFor = null; }}>{#if archived(p)}<ArchiveRestore size={18} /> Desarquivar{:else}<Archive size={18} /> Arquivar{/if}</button>
-        <button type="button" onclick={() => { save(p, { read: !isRead(p) }); menuFor = null; }}>{#if isRead(p)}<BookOpen size={18} /> Marcar como não lido{:else}<BookCheck size={18} /> Marcar como lido{/if}</button>
+        <button type="button" onclick={() => { saveSt(p, { archived: !archived(p) }); menuFor = null; }}>{#if archived(p)}<ArchiveRestore size={18} /> Desarquivar{:else}<Archive size={18} /> Arquivar{/if}</button>
+        <button type="button" onclick={() => { saveSt(p, { read: !isRead(p) }); menuFor = null; }}>{#if isRead(p)}<BookOpen size={18} /> Marcar como não lido{:else}<BookCheck size={18} /> Marcar como lido{/if}</button>
         <button type="button" class="cancel" onclick={() => (menuFor = null)}><X size={18} /> Cancelar</button>
       </div>
     {/if}
@@ -292,6 +309,9 @@
               <button type="button" class="sub" class:current={c === cur && subOf(p) === s} onclick={() => moveTo(p, s, c)}>{gname(`${c}/${s}`)}</button>
             {/each}
           {/each}
+          <div class="grp-title">Dono</div>
+          <button type="button" class:current={!owned(p)} onclick={() => setOwner(p, '')}>compartilhado</button>
+          {#each people as u (u.id)}<button type="button" class="sub" class:current={owned(p) === u.id} onclick={() => setOwner(p, u.id)}>{u.username}{#if u.id === me()} <span class="pill muted">eu</span>{/if}</button>{/each}
           <div class="grp-title">Criar</div>
           {#if newSub === p.slug}
             <form class="edit" onsubmit={(e) => { e.preventDefault(); const s = kebab(draft); if (s) { saveG(`${cur}/${s}`, { title: draft.trim() }); moveTo(p, s, cur); } newSub = null; }}>

@@ -4,7 +4,8 @@
   import Checklist from '$lib/widgets/Checklist.svelte';
   import ReadDone from '$lib/widgets/ReadDone.svelte';
   import { enhance, Toc, Diagrams } from '@lucasgiraldelli/atlas-core';
-  import { getOverride, listOverrides, saveOverride } from '$lib/db/overrides';
+  import { getOverride, listOverrides } from '$lib/db/overrides';
+  import { getState, saveState } from '$lib/db/state';
   import { resolveAliasSlug } from '$lib/db/requests';
   import { goto } from '$app/navigation';
   import { pages } from '$lib/content';
@@ -32,7 +33,7 @@
     if (!restored || !p) return;
     const h = document.documentElement.scrollHeight - innerHeight; const frac = h > 0 ? scrollY / h : 0;
     try { localStorage.setItem(posKey(), String(frac)); } catch {}
-    clearTimeout(posTimer); posTimer = setTimeout(() => saveOverride(p.slug, { pos: frac, opened: new Date().toISOString() }).catch(() => {}), 1500);
+    clearTimeout(posTimer); posTimer = setTimeout(() => saveState(p.slug, { pos: frac, opened: new Date().toISOString() }).catch(() => {}), 1500);
   }
   function restorePos(frac: number) {
     if (location.hash || frac <= 0.005) { restored = true; return; }
@@ -60,10 +61,11 @@
     enhance(main, p).then((c) => (cleanup = c));
     // título renomeado na home vale aqui também: aba, h1 e índice lateral
     let local = 0; try { local = parseFloat(localStorage.getItem(posKey()) || '0'); } catch {}
-    getOverride(p.slug).then((o) => {
-      archived = !!o?.archived; if (o?.title) { title = o.title; const h1 = main.querySelector('.doc-head h1'); if (h1) h1.textContent = o.title; }
-      restorePos(Math.max(local, o?.pos ?? 0));
-      saveOverride(p.slug, { opened: new Date().toISOString() }).catch(() => {});
+    getOverride(p.slug).then((o) => { if (o?.title) { title = o.title; const h1 = main.querySelector('.doc-head h1'); if (h1) h1.textContent = o.title; } });
+    getState(p.slug).then((s) => {
+      archived = !!s?.archived;
+      restorePos(Math.max(local, s?.pos ?? 0));
+      saveState(p.slug, { opened: new Date().toISOString() }).catch(() => {});
     }).catch(() => restorePos(local));
     onScroll(); addEventListener('scroll', onScroll, { passive: true });
     })();

@@ -225,6 +225,8 @@ async function handle(req) {
       const v = await ensureRenders(file, `${cat}/${slug}`);
       if (v.removed) out.note = `${out.note ?? ''} (${v.removed} diagrama(s) inválido(s) removido(s))`.trim();
       publish(`feat(content): ${cat}/${slug} (via Atlas + LLM)`, { built: true });
+      // quem pediu é o dono do documento novo (só essa pessoa o vê na home; "compartilhado" pode ser escolhido depois)
+      if (req.owner) { try { await pb.collection('overrides').create({ slug: `${cat}/${slug}`, owner: req.owner }); } catch (e) { console.log('owner não registrado:', e.message); } }
       result = { action: 'create', slug: `${cat}/${slug}`, url: `/${cat}/${slug}/`, title: out.title, note: out.note };
     } else throw new Error('ação desconhecida');
     await pb.collection('requests').update(req.id, { status: 'done', result });

@@ -2,7 +2,8 @@ import type { RecordModel } from 'pocketbase';
 import { pb, quiet } from './client.svelte';
 
 /** Ajustes por página: título exibido, ordem, oculta, subcategoria virtual. */
-export interface Override extends RecordModel { slug: string; title: string; order: number; hidden: boolean; sub: string; cat: string; archived: boolean; read: boolean; pos: number; opened: string }
+/** Ajustes estruturais por página (globais): título, ordem, categoria/sub virtuais e dono do documento (vazio = compartilhado). */
+export interface Override extends RecordModel { slug: string; title: string; order: number; hidden: boolean; sub: string; cat: string; owner: string }
 const pages = () => pb.collection('overrides');
 export const listOverrides = () => quiet(() => pages().getFullList<Override>(), [] as Override[]);
 export const getOverride = (slug: string) => quiet(() => pages().getFirstListItem<Override>(`slug="${slug}"`), null as Override | null);

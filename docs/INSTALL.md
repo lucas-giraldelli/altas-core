@@ -29,10 +29,10 @@ LLM_MODEL=gemini-3.5-flash-lite    # or claude-haiku-4-5-20251001, gpt-5-mini, l
 # LLM_BASE_URL=http://host:11434/v1
 PB_EMAIL=admin@example.com         # PocketBase superuser (worker, setup)
 PB_PASS=a-long-password
-PB_PIN=12345678                    # the 8-digit PIN typed on the gate; password of the interface user
+PB_USERS=alice:12345678,bob:87654321   # interface users, name:PIN (8 digits); each person has their own PIN
 ```
 
-`.env` holds the two public values the browser sees: `PUBLIC_PB_URL` (the PocketBase URL, `http://localhost:8090` locally) and `PUBLIC_PB_EMAIL` (the interface user; the PIN is its password). Change them if the site is exposed on a domain.
+`.env` holds the two public values the browser sees: `PUBLIC_PB_URL` (the PocketBase URL, `http://localhost:8090` locally) and `PUBLIC_PB_USERS` (the usernames the gate tries the PIN against, e.g. `alice,bob`). Each person has their own notes, checklist answers, reading position, read and archived flags; a document can be shared or owned by one person (others do not see it on the home).
 
 ### 3. Install and start
 

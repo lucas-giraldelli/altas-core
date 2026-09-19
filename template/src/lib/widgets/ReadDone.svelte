@@ -3,11 +3,11 @@
   import { onMount } from 'svelte';
   import { BookCheck, BookOpen } from '@lucide/svelte';
   import { auth } from '$lib/db/client.svelte';
-  import { getOverride, saveOverride } from '$lib/db/overrides';
+  import { getState, saveState } from '$lib/db/state';
   let { slug }: { slug: string } = $props();
   let read = $state<boolean | null>(null);
-  onMount(async () => { if (auth.ok) read = !!(await getOverride(slug))?.read; });
-  async function toggle() { const o = await saveOverride(slug, { read: !read }); read = !!o.read; }
+  onMount(async () => { if (auth.ok) read = !!(await getState(slug))?.read; });
+  async function toggle() { const o = await saveState(slug, { read: !read }); read = !!o.read; }
 </script>
 
 {#if read !== null}

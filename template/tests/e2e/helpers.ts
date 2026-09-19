@@ -1,6 +1,6 @@
 import { type Page, expect } from '@playwright/test';
-export const PIN = process.env.ATLAS_PIN || '12345678';
-export const USER = process.env.PUBLIC_PB_EMAIL || 'atlas@example.com';
+export const PIN = process.env.ATLAS_PIN || '12345678'; // PIN de 'lucas'
+export const USER = process.env.ATLAS_USER || 'lucas';
 export const PB = process.env.PB_URL || 'http://localhost:8090';
 
 /** Entra pela tela de PIN (auto-submit ao 8º dígito). */
