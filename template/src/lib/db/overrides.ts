@@ -13,7 +13,7 @@ export async function saveOverride(slug: string, data: Partial<Override>) {
 }
 
 /** Ajustes por grupo (categoria "trackfive" ou subcategoria "trackfive/di"): nome exibido e ordem. */
-export interface Group extends RecordModel { path: string; title: string; order: number; collapsed: boolean; shared: string[] }
+export interface Group extends RecordModel { path: string; title: string; order: number; collapsed: boolean; shared: string[]; private: boolean }
 const groups = () => pb.collection('groups');
 export const listGroups = () => quiet(() => groups().getFullList<Group>(), [] as Group[]);
 export async function saveGroup(path: string, data: Partial<Group>) {

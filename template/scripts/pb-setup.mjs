@@ -46,6 +46,7 @@ const want = [
   { name: 'groups', type: 'base', listRule: AUTH, viewRule: AUTH, createRule: AUTH, updateRule: AUTH, deleteRule: AUTH,
     fields: [
       shared(),                           // categoria/sub compartilhada: todas as páginas dentro ficam visíveis para esses usuários
+      { name: 'private', type: 'bool' },  // privada: nunca aparece em "ver todos"; só dono das páginas e `shared`
       { name: 'path', type: 'text', required: true }, // "trackfive" ou "trackfive/di"
       { name: 'title', type: 'text' },
       { name: 'order', type: 'number' },

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { afterNavigate } from '$app/navigation';
-  import { Pencil, Check, X, ArrowUp, ArrowDown, FolderInput, Plus, Archive, ArchiveRestore, BookCheck, BookOpen, MoreVertical, History, Trash2, ChevronRight, GripVertical, ArrowUpDown, BookMarked, Users, Copy } from '@lucide/svelte';
+  import { Pencil, Check, X, ArrowUp, ArrowDown, FolderInput, Plus, Archive, ArchiveRestore, BookCheck, BookOpen, MoreVertical, History, Trash2, ChevronRight, GripVertical, ArrowUpDown, BookMarked, Users, Copy, Lock, LockOpen } from '@lucide/svelte';
   import { byCat, type Page } from '$lib/content';
   import { kebab } from '$lib/content/slug';
   import { auth } from '$lib/db/client.svelte';
@@ -50,9 +50,11 @@
   // com quem está compartilhado: o documento e as categorias/subcategorias que o contêm
   const sharedWith = (p: Page) => new Set([...(ov[p.slug]?.shared ?? []), ...(gr[catOf(p)]?.shared ?? []), ...(subOf(p) ? gr[`${catOf(p)}/${subOf(p)}`]?.shared ?? [] : [])]);
   const canSee = (p: Page) => !owned(p) || owned(p) === me() || sharedWith(p).has(me());
-  const mine = (p: Page) => canSee(p) || showAll;
+  // categoria/sub privada (ex.: da empresa): fora de "ver todos"; só quem pode ver por dono ou compartilhamento
+  const isPrivate = (p: Page) => !!(gr[catOf(p)]?.private || (subOf(p) && gr[`${catOf(p)}/${subOf(p)}`]?.private));
+  const mine = (p: Page) => canSee(p) || (showAll && !isPrivate(p));
   const isShared = (p: Page) => sharedWith(p).size > 0;
-  const nHidden = $derived(allPages.filter((p) => !canSee(p)).length);
+  const nHidden = $derived(allPages.filter((p) => !canSee(p) && !isPrivate(p)).length);
   const toggleIn = (list: string[] | undefined, id: string) => (list ?? []).includes(id) ? (list ?? []).filter((x) => x !== id) : [...(list ?? []), id];
   async function shareDoc(p: Page, id: string) { await save(p, { shared: toggleIn(ov[p.slug]?.shared, id) }); }
   async function shareGroup(path: string, id: string) { await saveG(path, { shared: toggleIn(gr[path]?.shared, id) }); }
@@ -201,7 +203,7 @@
         {:else}
           <div class="{cls} grp">
             {#if auth.ok}<button type="button" class="gname" title="Renomear" onclick={() => startEdit(`g:${path}`, gname(path))}>{gname(path)}</button>{:else}<span>{gname(path)}</span>{/if}
-            {#if auth.ok}<span class="tools always"><button type="button" title="Renomear grupo" onclick={() => startEdit(`g:${path}`, gname(path))}><Pencil size={13} /></button>{#if cls === 'cat'}<button type="button" title="Nova subcategoria" onclick={() => { addingSub = path; draft = ''; }}><Plus size={13} /></button>{#if subsOf(cats[path], path).filter(Boolean).length > 1}<button type="button" title="Reordenar subcategorias" onclick={() => startReorder(path)}><ArrowUpDown size={13} /></button>{/if}{/if}{#if people.length > 1}<button type="button" title="Compartilhar {cls === 'cat' ? 'categoria' : 'subcategoria'}" class:active={(gr[path]?.shared ?? []).length > 0} onclick={() => (sharing = sharing === path ? null : path)}><Users size={13} /></button>{/if}{#if empty}<button type="button" title="Excluir grupo vazio" class="danger" onclick={() => removeG(path)}><Trash2 size={13} /></button>{/if}</span>{/if}
+            {#if auth.ok}<span class="tools always"><button type="button" title="Renomear grupo" onclick={() => startEdit(`g:${path}`, gname(path))}><Pencil size={13} /></button>{#if cls === 'cat'}<button type="button" title="Nova subcategoria" onclick={() => { addingSub = path; draft = ''; }}><Plus size={13} /></button>{#if subsOf(cats[path], path).filter(Boolean).length > 1}<button type="button" title="Reordenar subcategorias" onclick={() => startReorder(path)}><ArrowUpDown size={13} /></button>{/if}{/if}{#if people.length > 1}<button type="button" title={gr[path]?.private ? 'Privada (fora de "ver todos"); clique para tornar visível' : 'Tornar privada (fora de "ver todos")'} class:active={!!gr[path]?.private} onclick={() => saveG(path, { private: !gr[path]?.private })}>{#if gr[path]?.private}<Lock size={13} />{:else}<LockOpen size={13} />{/if}</button>{/if}{#if people.length > 1}<button type="button" title="Compartilhar {cls === 'cat' ? 'categoria' : 'subcategoria'}" class:active={(gr[path]?.shared ?? []).length > 0} onclick={() => (sharing = sharing === path ? null : path)}><Users size={13} /></button>{/if}{#if empty}<button type="button" title="Excluir grupo vazio" class="danger" onclick={() => removeG(path)}><Trash2 size={13} /></button>{/if}</span>{/if}
             {#if sharing === path}<span class="share-panel">{#each people.filter((u) => u.id !== me()) as u (u.id)}<button type="button" class:current={(gr[path]?.shared ?? []).includes(u.id)} onclick={() => shareGroup(path, u.id)}>{(gr[path]?.shared ?? []).includes(u.id) ? '✓ ' : ''}{u.username}</button>{/each}</span>{/if}
           </div>
         {/if}
