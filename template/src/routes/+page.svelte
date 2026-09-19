@@ -267,12 +267,14 @@
                 {#if auth.ok}
                   <button type="button" class="more" title="Ações" aria-label="Ações" aria-expanded={menuFor === p.slug} onclick={() => openMenu(p.slug)}><MoreVertical size={16} /></button>
                   <span class="tools">
+                    {#if owned(p) && owned(p) !== me()}<button type="button" title="Clonar para mim" onclick={() => { moving = p.slug; cloning = true; menuFor = null; }}><Copy size={14} /></button>{:else}
                     <button type="button" title="Renomear" onclick={() => { startEdit(p.slug, title(p)); menuFor = null; }}><Pencil size={14} /></button>
-                    {#if owned(p) && owned(p) !== me()}<button type="button" title="Clonar para mim" onclick={() => { moving = p.slug; cloning = true; menuFor = null; }}><Copy size={14} /></button>{:else}<button type="button" title="Mover para outra subcategoria" onclick={() => { moving = p.slug; cloning = false; draft = subOf(p); menuFor = null; }}><FolderInput size={14} /></button>{/if}
+                    <button type="button" title="Mover para outra subcategoria" onclick={() => { moving = p.slug; cloning = false; draft = subOf(p); menuFor = null; }}><FolderInput size={14} /></button>
                     <button type="button" title="Subir" onclick={() => move(p, cats[cat], -1)}><ArrowUp size={14} /></button>
                     <button type="button" title="Descer" onclick={() => move(p, cats[cat], 1)}><ArrowDown size={14} /></button>
                     <button type="button" title={archived(p) ? 'Desarquivar' : 'Arquivar'} onclick={() => { saveSt(p, { archived: !archived(p) }); menuFor = null; }}>{#if archived(p)}<ArchiveRestore size={14} />{:else}<Archive size={14} />{/if}</button>
                     <button type="button" title={isRead(p) ? 'Marcar como não lido' : 'Marcar como lido'} onclick={() => { saveSt(p, { read: !isRead(p) }); menuFor = null; }}>{#if isRead(p)}<BookOpen size={14} />{:else}<BookCheck size={14} />{/if}</button>
+                    {/if}
                   </span>
                 {/if}
               {/if}
@@ -299,13 +301,14 @@
       <div class="scrim" onclick={() => (menuFor = null)}></div>
       <div class="sheet" class:armed={menuArmed} role="menu">
         <div class="sheet-title">{title(p)}</div>
-        <button type="button" onclick={() => { startEdit(p.slug, title(p)); menuFor = null; }}><Pencil size={18} /> Renomear</button>
         {#if owned(p) && owned(p) !== me()}<button type="button" onclick={() => { moving = p.slug; cloning = true; menuFor = null; }}><Copy size={18} /> Clonar para mim</button>{:else}
-        <button type="button" onclick={() => { moving = p.slug; cloning = false; menuFor = null; }}><FolderInput size={18} /> Mover para outra categoria</button>{/if}
+        <button type="button" onclick={() => { startEdit(p.slug, title(p)); menuFor = null; }}><Pencil size={18} /> Renomear</button>
+        <button type="button" onclick={() => { moving = p.slug; cloning = false; menuFor = null; }}><FolderInput size={18} /> Mover para outra categoria</button>
         <button type="button" onclick={() => move(p, cats[catOf(p)], -1)}><ArrowUp size={18} /> Subir</button>
         <button type="button" onclick={() => move(p, cats[catOf(p)], 1)}><ArrowDown size={18} /> Descer</button>
         <button type="button" onclick={() => { saveSt(p, { archived: !archived(p) }); menuFor = null; }}>{#if archived(p)}<ArchiveRestore size={18} /> Desarquivar{:else}<Archive size={18} /> Arquivar{/if}</button>
         <button type="button" onclick={() => { saveSt(p, { read: !isRead(p) }); menuFor = null; }}>{#if isRead(p)}<BookOpen size={18} /> Marcar como não lido{:else}<BookCheck size={18} /> Marcar como lido{/if}</button>
+        {/if}
         <button type="button" class="cancel" onclick={() => (menuFor = null)}><X size={18} /> Cancelar</button>
       </div>
     {/if}

@@ -3,17 +3,23 @@
   import { RefreshCw, LogOut, AArrowUp, AArrowDown, MoreVertical, BookCheck, BookOpen, Share2, FileDown, WandSparkles } from '@lucide/svelte';
   import { enqueueEdit } from '$lib/db/requests';
   import EditModal from './EditModal.svelte';
-  import { auth, logout, pb } from '$lib/db/client.svelte';
+  import { auth, logout, pb, me } from '$lib/db/client.svelte';
   import { getScale, setScale, ModeToggle } from '@lucasgiraldelli/atlas-core';
   import { page } from '$app/state';
   import { find } from '$lib/content';
   import { getState, saveState } from '$lib/db/state';
+  import { getOverride } from '$lib/db/overrides';
   let scale = $state(1), open = $state(false), read = $state<boolean | null>(null), armed = $state(false);
   function toggleMenu() { open = !open; armed = false; if (open) setTimeout(() => (armed = true), 350); }
   const slug = $derived(page.url.pathname.replace(/^\/|\/$/g, ''));
   const onPage = $derived(!!slug && !slug.startsWith('gate') && !!find(slug));
   onMount(() => { scale = getScale(); });
-  $effect(() => { if (onPage && auth.ok) getState(slug).then((o) => (read = !!o?.read)); else read = null; });
+  // documento de outra pessoa: sem "lido" nem "pedir alteração" na topbar
+  let foreign = $state(false);
+  $effect(() => {
+    if (onPage && auth.ok) { getOverride(slug).then((o) => (foreign = !!o?.owner && o.owner !== me())); getState(slug).then((o) => (read = !!o?.read)); }
+    else { read = null; foreign = false; }
+  });
   async function toggleRead() { const o = await saveState(slug, { read: !read }); read = !!o.read; }
   // PDF pré-gerado no build (build/pdf/<slug>.pdf): compartilha (mobile) ou baixa; sem PDF, cai na impressão do navegador
   let sharing = $state(false), sentMsg = $state(false);
@@ -78,8 +84,8 @@
     <button type="button" title="Aumentar fonte" aria-label="Aumentar fonte" onclick={() => (scale = setScale(scale + 0.1))} disabled={scale >= 1.4}><AArrowUp size={18} /><i>fonte maior</i></button>
     <ModeToggle />
     {#if onPage}<button type="button" title={canShare ? 'Compartilhar PDF' : 'Baixar PDF'} aria-label={canShare ? 'Compartilhar PDF' : 'Baixar PDF'} disabled={sharing} onclick={sharePdf}>{#if canShare}<Share2 size={18} />{:else}<FileDown size={18} />{/if}<i>{canShare ? 'compartilhar pdf' : 'baixar pdf'}</i></button>{/if}
-    {#if onPage && auth.ok}<button type="button" title="Pedir alteração no documento" aria-label="Pedir alteração" onclick={askEdit}><WandSparkles size={18} /><i>pedir alteração</i></button>{/if}
-    {#if read !== null}
+    {#if onPage && auth.ok && !foreign}<button type="button" title="Pedir alteração no documento" aria-label="Pedir alteração" onclick={askEdit}><WandSparkles size={18} /><i>pedir alteração</i></button>{/if}
+    {#if read !== null && !foreign}
       <button type="button" title={read ? 'Marcar como não lido' : 'Marcar como lido'} class:active={read} onclick={toggleRead}>{#if read}<BookCheck size={18} />{:else}<BookOpen size={18} />{/if}<i>{read ? 'lido' : 'marcar como lido'}</i></button>
     {/if}
     {#if auth.ok}<button type="button" title="Sair" aria-label="Sair" onclick={leave}><LogOut size={18} /><i>sair</i></button>{/if}
