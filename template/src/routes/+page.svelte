@@ -47,8 +47,16 @@
   // documentos de outra pessoa (overrides.owner) ficam fora da home, a menos que "ver todos" esteja ligado
   let showAll = $state(false);
   const owned = (p: Page) => ov[p.slug]?.owner || '';
-  const mine = (p: Page) => !owned(p) || owned(p) === me() || showAll;
-  const nHidden = $derived(allPages.filter((p) => owned(p) && owned(p) !== me()).length);
+  // com quem está compartilhado: o documento e as categorias/subcategorias que o contêm
+  const sharedWith = (p: Page) => new Set([...(ov[p.slug]?.shared ?? []), ...(gr[catOf(p)]?.shared ?? []), ...(subOf(p) ? gr[`${catOf(p)}/${subOf(p)}`]?.shared ?? [] : [])]);
+  const canSee = (p: Page) => !owned(p) || owned(p) === me() || sharedWith(p).has(me());
+  const mine = (p: Page) => canSee(p) || showAll;
+  const isShared = (p: Page) => sharedWith(p).size > 0;
+  const nHidden = $derived(allPages.filter((p) => !canSee(p)).length);
+  const toggleIn = (list: string[] | undefined, id: string) => (list ?? []).includes(id) ? (list ?? []).filter((x) => x !== id) : [...(list ?? []), id];
+  async function shareDoc(p: Page, id: string) { await save(p, { shared: toggleIn(ov[p.slug]?.shared, id) }); }
+  async function shareGroup(path: string, id: string) { await saveG(path, { shared: toggleIn(gr[path]?.shared, id) }); }
+  let sharing = $state<string | null>(null); // grupo com o painel de compartilhamento aberto
   // usuários conhecidos (para atribuir dono): id → username, carregado do PocketBase
   let people = $state<{ id: string; username: string }[]>([]);
   // última página aberta (overrides.opened), para retomar de onde parou
@@ -187,7 +195,8 @@
         {:else}
           <div class="{cls} grp">
             {#if auth.ok}<button type="button" class="gname" title="Renomear" onclick={() => startEdit(`g:${path}`, gname(path))}>{gname(path)}</button>{:else}<span>{gname(path)}</span>{/if}
-            {#if auth.ok}<span class="tools always"><button type="button" title="Renomear grupo" onclick={() => startEdit(`g:${path}`, gname(path))}><Pencil size={13} /></button>{#if cls === 'cat'}<button type="button" title="Nova subcategoria" onclick={() => { addingSub = path; draft = ''; }}><Plus size={13} /></button>{#if subsOf(cats[path], path).filter(Boolean).length > 1}<button type="button" title="Reordenar subcategorias" onclick={() => startReorder(path)}><ArrowUpDown size={13} /></button>{/if}{/if}{#if empty}<button type="button" title="Excluir grupo vazio" class="danger" onclick={() => removeG(path)}><Trash2 size={13} /></button>{/if}</span>{/if}
+            {#if auth.ok}<span class="tools always"><button type="button" title="Renomear grupo" onclick={() => startEdit(`g:${path}`, gname(path))}><Pencil size={13} /></button>{#if cls === 'cat'}<button type="button" title="Nova subcategoria" onclick={() => { addingSub = path; draft = ''; }}><Plus size={13} /></button>{#if subsOf(cats[path], path).filter(Boolean).length > 1}<button type="button" title="Reordenar subcategorias" onclick={() => startReorder(path)}><ArrowUpDown size={13} /></button>{/if}{/if}{#if people.length > 1}<button type="button" title="Compartilhar {cls === 'cat' ? 'categoria' : 'subcategoria'}" class:active={(gr[path]?.shared ?? []).length > 0} onclick={() => (sharing = sharing === path ? null : path)}><Users size={13} /></button>{/if}{#if empty}<button type="button" title="Excluir grupo vazio" class="danger" onclick={() => removeG(path)}><Trash2 size={13} /></button>{/if}</span>{/if}
+            {#if sharing === path}<span class="share-panel">{#each people.filter((u) => u.id !== me()) as u (u.id)}<button type="button" class:current={(gr[path]?.shared ?? []).includes(u.id)} onclick={() => shareGroup(path, u.id)}>{(gr[path]?.shared ?? []).includes(u.id) ? '✓ ' : ''}{u.username}</button>{/each}</span>{/if}
           </div>
         {/if}
       {/snippet}
@@ -245,7 +254,7 @@
               {:else}
                 <a href={href(p)} data-sveltekit-reload={p.raw || undefined} onclick={(e) => { e.stopPropagation(); menuFor = null; }}>
                   <span class="ttl">{#if isRead(p)}<BookCheck size={14} class="readmark" />{/if}{title(p)}{#if p.en}<span class="lang">EN</span>{/if}</span>
-                  <span class="meta">{#if owned(p)}<span class="pill muted">{people.find((u) => u.id === owned(p))?.username ?? 'privado'}</span>{' · '}{/if}{#if p.checklist}<span class="prog" class:full={(doneCount[p.slug] ?? 0) >= p.checklist}>{doneCount[p.slug] ?? 0}/{p.checklist}</span>{' · '}{/if}{[p.mode, p.date].filter(Boolean).join(' · ')}</span>
+                  <span class="meta">{#if isShared(p)}<span class="shared" title="compartilhado com {[...sharedWith(p)].map((id) => people.find((u) => u.id === id)?.username ?? '?').join(', ')}"><Users size={12} /></span>{' · '}{/if}{#if owned(p) && owned(p) !== me() && showAll}<span class="pill muted">{people.find((u) => u.id === owned(p))?.username ?? 'privado'}</span>{' · '}{/if}{#if p.checklist}<span class="prog" class:full={(doneCount[p.slug] ?? 0) >= p.checklist}>{doneCount[p.slug] ?? 0}/{p.checklist}</span>{' · '}{/if}{[p.mode, p.date].filter(Boolean).join(' · ')}</span>
                 </a>
                 {#if auth.ok}
                   <button type="button" class="more" title="Ações" aria-label="Ações" aria-expanded={menuFor === p.slug} onclick={() => openMenu(p.slug)}><MoreVertical size={16} /></button>
@@ -310,8 +319,12 @@
             {/each}
           {/each}
           <div class="grp-title">Dono</div>
-          <button type="button" class:current={!owned(p)} onclick={() => setOwner(p, '')}>compartilhado</button>
+          <button type="button" class:current={!owned(p)} onclick={() => setOwner(p, '')}>de todos</button>
           {#each people as u (u.id)}<button type="button" class="sub" class:current={owned(p) === u.id} onclick={() => setOwner(p, u.id)}>{u.username}{#if u.id === me()} <span class="pill muted">eu</span>{/if}</button>{/each}
+          {#if owned(p) && people.some((u) => u.id !== owned(p))}
+            <div class="grp-title">Compartilhar com</div>
+            {#each people.filter((u) => u.id !== owned(p)) as u (u.id)}<button type="button" class="sub" class:current={(ov[p.slug]?.shared ?? []).includes(u.id)} onclick={() => shareDoc(p, u.id)}>{(ov[p.slug]?.shared ?? []).includes(u.id) ? '✓ ' : ''}{u.username}</button>{/each}
+          {/if}
           <div class="grp-title">Criar</div>
           {#if newSub === p.slug}
             <form class="edit" onsubmit={(e) => { e.preventDefault(); const s = kebab(draft); if (s) { saveG(`${cur}/${s}`, { title: draft.trim() }); moveTo(p, s, cur); } newSub = null; }}>
@@ -339,6 +352,11 @@
 </main>
 
 <style>
+  .meta .shared { display: inline-flex; vertical-align: -2px; color: var(--teal); }
+  .tools button.active { color: var(--teal); }
+  .share-panel { display: inline-flex; gap: 6px; margin-left: 8px; }
+  .share-panel button { font: inherit; font-size: 12px; padding: 2px 8px; border: 1px solid var(--rule-2); border-radius: 12px; background: none; color: var(--ink-2); cursor: pointer; }
+  .share-panel button.current { border-color: var(--teal); color: var(--teal); }
   .resume { display: flex; align-items: center; gap: 12px; margin: 0 0 18px; padding: 12px 14px; border: 1px solid var(--rule-2); border-radius: 8px; background: var(--surface); color: var(--ink); text-decoration: none; }
   .resume:hover { border-color: var(--blue); }
   .resume span { display: flex; flex-direction: column; min-width: 0; flex: 1; }

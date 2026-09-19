@@ -15,6 +15,7 @@ const AUTH = '@request.auth.id != ""';
 const MINE = 'owner = @request.auth.id';
 const OWNED = { listRule: MINE, viewRule: MINE, createRule: `${AUTH} && ${MINE}`, updateRule: MINE, deleteRule: MINE };
 const owner = () => ({ name: 'owner', type: 'relation', collectionId: '_pb_users_auth_', maxSelect: 1, cascadeDelete: false });
+const shared = () => ({ name: 'shared', type: 'relation', collectionId: '_pb_users_auth_', maxSelect: 20, cascadeDelete: false }); // outros usuários com acesso
 const want = [
   { name: 'overrides', type: 'base', listRule: AUTH, viewRule: AUTH, createRule: AUTH, updateRule: AUTH, deleteRule: AUTH,
     fields: [
@@ -24,7 +25,8 @@ const want = [
       { name: 'hidden', type: 'bool' },
       { name: 'sub', type: 'text' }, // subcategoria virtual (sobrepõe a pasta)
       { name: 'cat', type: 'text' },      // categoria virtual (sobrepõe a pasta de primeiro nível)
-      owner(),                            // dono do documento: vazio = compartilhado; preenchido = só esse usuário vê na home
+      owner(),                            // dono do documento: vazio = de todos; preenchido = só o dono e os de `shared` veem na home
+      shared(),
       ...(process.env.KEEP_LEGACY ? [{ name: 'archived', type: 'bool' }, { name: 'read', type: 'bool' }, { name: 'pos', type: 'number' }, { name: 'opened', type: 'text' }] : []), // só durante a migração para state
       { name: 'updated', type: 'autodate', onCreate: true, onUpdate: true }
     ],
@@ -43,6 +45,7 @@ const want = [
     indexes: ['CREATE UNIQUE INDEX idx_state_owner_slug ON state (owner, slug)'] },
   { name: 'groups', type: 'base', listRule: AUTH, viewRule: AUTH, createRule: AUTH, updateRule: AUTH, deleteRule: AUTH,
     fields: [
+      shared(),                           // categoria/sub compartilhada: todas as páginas dentro ficam visíveis para esses usuários
       { name: 'path', type: 'text', required: true }, // "trackfive" ou "trackfive/di"
       { name: 'title', type: 'text' },
       { name: 'order', type: 'number' },
