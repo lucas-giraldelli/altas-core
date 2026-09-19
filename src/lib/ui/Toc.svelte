@@ -13,13 +13,14 @@
   let open = $state(false);        // mobile (drawer)
   let shown = $state(true);        // desktop (persistido)
   const mobile = () => innerWidth <= 900;
+  let isMobile = $state(false);      // no celular o índice é gaveta: o botão de abrir fica sempre visível
   function toggle() { if (mobile()) open = !open; else { shown = !shown; setToc(shown); } }
   let nav: HTMLElement;
 
   const slug = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 40);
 
   onMount(() => {
-    shown = getToc();
+    shown = getToc(); isMobile = mobile(); const onResize = () => (isMobile = mobile()); addEventListener('resize', onResize);
     const cleanup = { fn: () => {} };
     tick().then(() => {
     // content shipped its own TOC (the apostila does): adopt its links, drop the original nav
@@ -55,11 +56,11 @@
     targets.forEach((t) => obs.observe(t));
     cleanup.fn = () => obs.disconnect();
     });
-    return () => cleanup.fn();
+    return () => { cleanup.fn(); removeEventListener('resize', onResize); };
   });
 </script>
 
-{#if !(open || shown)}
+{#if isMobile ? !open : !shown}
   <div id="toc-btn">
     <a class="icon" href={home} title={L.back} aria-label={L.back}><ArrowLeft size={18} /></a>
     <button class="icon" aria-expanded="false" aria-controls="toc" title={L.show} onclick={toggle}><PanelLeftOpen size={18} /></button>
