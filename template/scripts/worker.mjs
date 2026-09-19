@@ -8,6 +8,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { makeFs } from './fs-ops.mjs';
 import { complete, llmConfig } from './llm.mjs';
+import { renderCheck } from './validate.mjs';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const env = Object.fromEntries(readFileSync(join(ROOT, 'secrets.env'), 'utf8').split('\n').filter((l) => l.includes('=')).map((l) => l.split('=', 2)));
@@ -47,7 +48,7 @@ async function fetchRef(ref) {
 
 const ask = (prompt) => complete(prompt, { json: true, cfg: LLM });
 
-function buildPrompt(req, idx, refText) {
+function buildPrompt(req, idx, refText, groupIndex = {}) {
   return `Você é o autor didático do Atlas, um site pessoal de estudo. Siga estritamente as regras abaixo.
 
 # REGRAS DE ESCRITA (da skill /learn)
@@ -62,6 +63,9 @@ ${TEMPLATE}
 # ÍNDICE ATUAL DO ATLAS (slug, título, modo, descrição, seções)
 ${JSON.stringify(idx, null, 1)}
 
+# CATEGORIAS E SUBCATEGORIAS EXISTENTES (pasta → nome exibido)
+${JSON.stringify(groupIndex, null, 1)}
+
 # PEDIDO DO USUÁRIO
 conteúdo/tema: ${req.content}
 referência: ${req.ref || '(nenhuma)'}
@@ -74,13 +78,66 @@ Decida UMA das três ações e responda em JSON estrito. Ordem de preferência: 
 Antes de decidir, percorra o ÍNDICE: se alguma página (mesmo com outro título) tem uma seção cujo título ou descrição cobre o pedido, a resposta é obrigatoriamente "exists" apontando essa seção. "create" só quando nenhuma página do índice trata do tema nem poderia recebê-lo como seção; criar uma página que repete assunto de outra é o pior erro possível.
 1. "exists": o Atlas já cobre isso o suficiente. Responda {"action":"exists","slug":"<slug existente>","section":"<título da seção que responde>","note":"<1 frase explicando>"}.
 2. "insert": cabe como uma seção nova dentro de uma página existente. Responda {"action":"insert","slug":"<slug existente>","title":"<título da seção>","section_html":"<section class=\\"topic\\" id=\\"<kebab>\\">…</section>","note":"<1 frase>"}. A seção segue o contrato (h3 com span.n vazio "+", p.lede, componentes), em HTML puro, sem style/script.
-3. "create": merece página própria. Responda {"action":"create","cat":"<categoria[/sub]>","title":"<título; inglês recebe sufixo (EN)>","lang":"pt-BR|en","mode":"referencia|leitura|apostila","page_html":"<documento HTML completo no contrato, do <!DOCTYPE> ao </html>>","note":"<1 frase>"}.
+3. "create": merece página própria. Responda {"action":"create","cat":"<categoria[/sub]>","title":"<título; inglês recebe sufixo (EN)>","lang":"pt-BR|en","mode":"referencia|leitura|apostila","page_html":"<documento HTML completo no contrato, do <!DOCTYPE> ao </html>>","note":"<1 frase>","groups":{"<pasta>":"<nome exibido>"},"rename_groups":{"<pasta existente>":"<novo nome exibido>"}}.
+   Categoria: reaproveite uma pasta existente quando o sentido coincide (mesmo em outro idioma). Se a sugerida for nova, "cat" é a pasta em kebab-case e "groups" dá o nome exibido de cada pasta nova (categoria e subcategoria). Se uma pasta existente ficar ambígua ao lado da nova (por exemplo "engineering" e uma nova de engenharia civil), use "rename_groups" para renomear a existente com um nome que diferencie ("engenharia de software") e dê à nova um nome igualmente específico ("engenharia civil"). Omitir "groups"/"rename_groups" quando não há nada a nomear.
+Mermaid: labels em inglês entre aspas; cor por papel com "classDef nome stroke:#hex,color:#hex" e aplicação inline Id["…"]:::nome; PROIBIDA a instrução "class A,B nome" e qualquer vírgula solta; "<" como "&lt;"; um diagrama simples e válido vale mais que um elaborado com erro.
 Regras absolutas: registro de livro didático conforme a seção PROSA acima (terceira pessoa, sem "você", sem coloquialismos, sem títulos metafóricos, ledes declarativos); sem travessões (—) em lugar nenhum; código em <pre data-lang="x"><code> com texto escapado; checklist com data-ref; metas atlas-mode, atlas-source (a referência) e atlas-date (${new Date().toISOString().slice(0, 10)}); labels de Mermaid em inglês entre aspas. Escreva no idioma do pedido. Seja fiel à referência; não invente fatos.`;
 }
 
 function sh(cmd) { return execSync(cmd, { cwd: ROOT, stdio: 'pipe', encoding: 'utf8' }); }
-function publish(msg) { sh('pnpm build'); sh('git add -A content'); sh(`git commit -qm ${JSON.stringify(msg)}`); sh('git push -q'); }
+function publish(msg, { built = false } = {}) { if (!built) sh('pnpm build'); sh('git add -A content'); sh(`git commit -qm ${JSON.stringify(msg)}`); sh('git push -q'); }
 const clean = (s) => s.replace(/ — /g, ': ').replace(/—/g, ',');
+
+/** pasta → nome exibido (grupos do PocketBase + pastas de content/ sem registro) */
+async function groupsIndex() {
+  const out = {};
+  for (const g of await pb.collection('groups').getFullList()) out[g.path] = g.title || g.path.split('/').pop();
+  for (const f of walk(join(ROOT, 'content'))) { const rel = f.slice(join(ROOT, 'content').length + 1).split('/'); if (rel.length > 1) { out[rel[0]] ??= rel[0]; if (rel.length > 2) out[`${rel[0]}/${rel[1]}`] ??= rel[1]; } }
+  return out;
+}
+/** Registra nomes exibidos das pastas novas (do LLM ou do que o usuário digitou) e renomeia grupos existentes se pedido. */
+async function applyGroups(cat, groups = {}, renames = {}, typed = '') {
+  const typedParts = (typed || '').replace(/^\/|\/$/g, '').split('/');
+  const parts = cat.split('/');
+  for (let i = 0; i < parts.length; i++) {
+    const path = parts.slice(0, i + 1).join('/');
+    const title = groups?.[path] || (kebab(typedParts[i] || '') === parts[i] ? typedParts[i] : '') || '';
+    let g = null; try { g = await pb.collection('groups').getFirstListItem(`path = ${JSON.stringify(path)}`); } catch {}
+    if (!g) await pb.collection('groups').create({ path, title }); else if (title && !g.title) await pb.collection('groups').update(g.id, { title });
+  }
+  for (const [path, title] of Object.entries(renames || {})) {
+    if (!title || path === cat || cat.startsWith(path + '/')) continue;
+    try { const r = await fs.ops['rename-group']({ path, title }); console.log('grupo renomeado', path, '→', r.path, `"${title}"`); }
+    catch (e) { console.log('rename_groups ignorado', path, e.message); }
+  }
+}
+
+/** Constrói, renderiza a página e conserta (ou remove) diagramas Mermaid inválidos antes de publicar. */
+async function ensureRenders(file, slug) {
+  sh('pnpm build');
+  let check = await renderCheck(ROOT, slug);
+  if (check.ok || check.skipped) return check;
+  let html = readFileSync(file, 'utf8');
+  for (const bad of check.brokenDiagrams) {
+    if (!bad.trim() || !html.includes(bad)) continue;
+    let fixed = '';
+    try {
+      const r = await ask(`O diagrama Mermaid abaixo tem erro de sintaxe e não renderiza (Mermaid 11). Corrija mantendo o mesmo conteúdo e as mesmas cores por papel. Regras: labels entre aspas; cores só com classDef (stroke e color) aplicadas inline com :::nome; nunca a instrução "class"; "<" como "&lt;". Responda em JSON {"mermaid":"<texto corrigido>"}.\n\n${bad}`);
+      fixed = String(r.mermaid || '').trim();
+    } catch {}
+    html = fixed ? html.replace(bad, '\n' + fixed + '\n') : html.replace(new RegExp(`\\s*<figure class="diagram">\\s*<pre class="mermaid">${bad.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}</pre>[\\s\\S]*?</figure>`), '');
+  }
+  writeFileSync(file, html);
+  sh('pnpm build');
+  check = await renderCheck(ROOT, slug);
+  if (!check.ok) { // segunda falha: remove o que sobrou quebrado
+    html = readFileSync(file, 'utf8');
+    for (const bad of check.brokenDiagrams) if (bad.trim() && html.includes(bad)) html = html.replace(new RegExp(`\\s*<figure class="diagram">\\s*<pre class="mermaid">${bad.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}</pre>[\\s\\S]*?</figure>`), '');
+    writeFileSync(file, html); sh('pnpm build');
+    check = { ...check, ok: true, removed: check.brokenDiagrams.length };
+  }
+  return check;
+}
 
 async function handleFs(req) {
   await pb.collection('requests').update(req.id, { status: 'running' });
@@ -97,12 +154,52 @@ async function handleFs(req) {
   }
 }
 
+async function handleEdit(req) {
+  await pb.collection('requests').update(req.id, { status: 'running' });
+  const { slug, anchor, instruction } = req.payload ?? {};
+  try {
+    const file = join(ROOT, 'content', slug + '.html'); if (!existsSync(file)) throw new Error('página inexistente: ' + slug);
+    let html = readFileSync(file, 'utf8');
+    const re = new RegExp(`<section class="topic"[^>]*\\bid="${anchor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"[^>]*>[\\s\\S]*?</section>`);
+    const m = html.match(re); if (!m) throw new Error('seção não encontrada: ' + anchor);
+    const raw = await complete(`Você é o autor didático do Atlas. Reescreva a seção abaixo de uma página existente seguindo a instrução do leitor, mantendo o contrato da página, o mesmo id da seção, o mesmo registro (livro didático, terceira pessoa, sem "você", sem travessões, títulos que nomeiam o conteúdo) e as cores por papel já usadas. Pode ampliar, acrescentar exemplos, boxes, um diagrama Mermaid (labels em inglês entre aspas, classDef com stroke e color aplicados inline com :::nome, nunca a instrução "class") ou encurtar, conforme pedido. Não altere o que a instrução não pede. Código em <pre data-lang="x"><code> escapado.
+
+# REGRAS DE ESCRITA
+${RULES}
+
+# CONTRATO DA PÁGINA
+${CONTRACT}
+
+# INSTRUÇÃO DO LEITOR
+${instruction}
+
+# SEÇÃO ATUAL
+${m[0]}
+
+Responda SOMENTE com o HTML da seção reescrita, começando em <section class="topic" id="${anchor}"> e terminando em </section>, sem cercas de código e sem comentários fora dela.`, { cfg: LLM, json: false });
+    const mm = String(raw).match(/<section class="topic"[\s\S]*<\/section>/); if (!mm) throw new Error('resposta sem <section>');
+    const sec = clean(mm[0]); if (!sec.includes(`id="${anchor}"`)) throw new Error('seção fora do contrato');
+    const out = { note: 'seção reescrita conforme o pedido' };
+    html = html.replace(m[0], sec.trim()); writeFileSync(file, html);
+    const v = await ensureRenders(file, slug);
+    publish(`feat(content): ${slug}: alteração em #${anchor} (via Atlas + LLM)`, { built: true });
+    const result = { action: 'edit', slug, url: `/${slug}/#${anchor}`, title: req.payload.heading, note: `${out.note ?? ''}${v.removed ? ' (diagrama inválido removido)' : ''}` };
+    await pb.collection('requests').update(req.id, { status: 'done', result });
+    console.log(new Date().toISOString(), 'edit', slug, anchor);
+  } catch (e) {
+    console.error(new Date().toISOString(), 'edit error', e.message);
+    await pb.collection('requests').update(req.id, { status: 'error', result: { action: 'edit', note: e.message.slice(0, 500) } });
+  }
+}
+
 async function handle(req) {
   if (req.kind === 'fs') return handleFs(req);
+  if (req.kind === 'edit') return handleEdit(req);
   await pb.collection('requests').update(req.id, { status: 'running' });
   try {
     const idx = index(); const refText = await fetchRef(req.ref);
-    const out = await ask(buildPrompt(req, idx, refText));
+    const groupIndex = await groupsIndex();
+    const out = await ask(buildPrompt(req, idx, refText, groupIndex));
     let result;
     if (out.action === 'exists') {
       result = { action: 'exists', slug: out.slug, url: `/${out.slug}/`, title: idx.find((p) => p.slug === out.slug)?.title ?? out.slug, note: `${out.note} Seção: ${out.section ?? ''}` };
@@ -114,16 +211,20 @@ async function handle(req) {
       const m = html.match(/<hr class="sep">|<section class="topic" id="(erros|verificacao|exercicios|checklist)"/);
       html = m ? html.slice(0, m.index) + sec + '\n\n' + html.slice(m.index) : html.replace('</main>', sec + '\n</main>');
       writeFileSync(file, html);
-      publish(`feat(content): ${out.slug}: seção "${out.title}" (via Atlas + LLM)`);
+      await ensureRenders(file, out.slug);
+      publish(`feat(content): ${out.slug}: seção "${out.title}" (via Atlas + LLM)`, { built: true });
       result = { action: 'insert', slug: out.slug, url: `/${out.slug}/#${(sec.match(/id="([^"]+)"/) || [])[1] ?? ''}`, title: out.title, note: out.note };
     } else if (out.action === 'create') {
       let html = clean(out.page_html);
       if (!/atlas-mode/.test(html) || !/<main/.test(html)) throw new Error('página fora do contrato');
-      const cat = (out.cat || req.cat || 'general').replace(/^\/|\/$/g, ''); const slug = kebab(out.title);
+      const cat = (out.cat || req.cat || 'general').replace(/^\/|\/$/g, '').split('/').map(kebab).join('/'); const slug = kebab(out.title);
+      await applyGroups(cat, out.groups, out.rename_groups, req.cat);
       const dir = join(ROOT, 'content', cat); mkdirSync(dir, { recursive: true });
       const file = join(dir, slug + '.html'); if (existsSync(file)) throw new Error('já existe: ' + cat + '/' + slug);
       writeFileSync(file, html);
-      publish(`feat(content): ${cat}/${slug} (via Atlas + LLM)`);
+      const v = await ensureRenders(file, `${cat}/${slug}`);
+      if (v.removed) out.note = `${out.note ?? ''} (${v.removed} diagrama(s) inválido(s) removido(s))`.trim();
+      publish(`feat(content): ${cat}/${slug} (via Atlas + LLM)`, { built: true });
       result = { action: 'create', slug: `${cat}/${slug}`, url: `/${cat}/${slug}/`, title: out.title, note: out.note };
     } else throw new Error('ação desconhecida');
     await pb.collection('requests').update(req.id, { status: 'done', result });
@@ -136,7 +237,10 @@ async function handle(req) {
 
 async function tick() {
   const pending = await pb.collection('requests').getFullList({ filter: 'status = "pending"', sort: 'created' });
-  for (const r of pending) await handle(r);
+  for (const r of pending) {
+    try { await pb.collection('requests').getOne(r.id); } catch { continue; } // apagado enquanto esperava: não executa
+    await handle(r);
+  }
 }
 if (process.argv.includes('--once')) { await tick(); process.exit(0); }
 console.log('atlas worker: ouvindo', PB_URL, 'llm', LLM.provider, LLM.model);

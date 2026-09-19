@@ -1,10 +1,13 @@
 <script lang="ts">
-  import { MessageSquarePlus, Pencil, Trash2, Check, X } from '@lucide/svelte';
+  import { MessageSquarePlus, Pencil, Trash2, Check, X, WandSparkles } from '@lucide/svelte';
   import type { Note } from '$lib/db/notes';
-  let { anchor, notes, canEdit, onAdd, onEdit, onDelete }: {
+  let { anchor, notes, canEdit, onAdd, onEdit, onDelete, onRequestEdit }: {
     anchor: string; notes: Note[]; canEdit: boolean;
     onAdd: (b: string) => Promise<void>; onEdit: (id: string, b: string) => Promise<void>; onDelete: (id: string) => Promise<void>;
+    onRequestEdit?: (instruction: string) => Promise<void>;
   } = $props();
+  let asking = $state(false), ask = $state(''), sent = $state(false);
+  async function submitAsk() { if (ask.trim() && onRequestEdit) { await onRequestEdit(ask.trim()); ask = ''; asking = false; sent = true; setTimeout(() => (sent = false), 4000); } }
   let adding = $state(false), draft = $state(''), editing = $state<string | null>(null), edraft = $state('');
   const fmt = (d: string) => new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
   async function submit() { if (draft.trim()) { await onAdd(draft.trim()); draft = ''; adding = false; } }
@@ -32,8 +35,18 @@
         <textarea bind:value={draft} rows="3" placeholder="sua nota…" autofocus onkeydown={(e) => { if (e.key === 'Escape') adding = false; if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) submit(); }}></textarea>
         <div class="row"><button onclick={submit}><Check size={14} /> salvar</button><button onclick={() => (adding = false)}><X size={14} /></button></div>
       </div>
+    {:else if asking}
+      <div class="note new ask">
+        <!-- svelte-ignore a11y_autofocus -->
+        <textarea bind:value={ask} rows="3" placeholder="o que mudar nesta seção: explicar melhor…, acrescentar exemplo de…, encurtar…" autofocus onkeydown={(e) => { if (e.key === 'Escape') asking = false; if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) submitAsk(); }}></textarea>
+        <div class="row"><button onclick={submitAsk}><WandSparkles size={14} /> pedir alteração</button><button onclick={() => (asking = false)}><X size={14} /></button></div>
+      </div>
     {:else}
-      <button class="add" onclick={() => (adding = true)}><MessageSquarePlus size={14} /> anotar</button>
+      <div class="row acts">
+        <button class="add" onclick={() => (adding = true)}><MessageSquarePlus size={14} /> anotar</button>
+        {#if onRequestEdit}<button class="add" onclick={() => (asking = true)}><WandSparkles size={14} /> pedir alteração</button>{/if}
+        {#if sent}<span class="sent">pedido enviado; o worker aplica e o histórico da home mostra o resultado</span>{/if}
+      </div>
     {/if}
   {/if}
 </div>
@@ -41,6 +54,9 @@
 
 <style>
   .notes { margin: 10px 0 18px; display: grid; gap: 8px; }
+  .acts { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  .sent { font-size: .8em; color: var(--ink-3); }
+  .note.ask { border-left-color: var(--violet); background: color-mix(in srgb, var(--violet) 6%, transparent); }
   .note { border-left: 3px solid var(--green); background: color-mix(in srgb, var(--green) 6%, transparent); padding: 10px 14px; font-size: .92em; }
   .note p { margin: 0 0 6px; white-space: pre-wrap; }
   .row { display: flex; gap: 6px; align-items: center; }

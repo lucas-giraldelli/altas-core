@@ -8,7 +8,7 @@
   async function refresh() { reqs = await listRequests(); onPending?.(reqs.filter((r) => r.status === 'pending' || r.status === 'running').length); }
   $effect(() => { void tick; refresh(); });
   onMount(() => { const t = setInterval(() => { if (reqs.some((r) => r.status === 'pending' || r.status === 'running')) refresh(); }, 10000); return () => clearInterval(t); });
-  const label = { exists: 'já existe:', insert: 'inserido em', create: 'criado:' } as const;
+  const label: Record<string, string> = { exists: 'já existe:', insert: 'inserido em', create: 'criado:', edit: 'alterado:', 'rename-page': 'renomeado:', 'move-page': 'movido:', 'rename-group': 'grupo renomeado:', 'create-group': 'grupo criado:', 'delete-group': 'grupo removido:' };
   const fmt = (d: string) => new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 </script>
 
@@ -29,7 +29,7 @@
           {:else}<span class="note">{r.status === 'running' ? 'trabalhando…' : 'na fila (o PC precisa estar ligado)'}</span>{/if}
         </span>
         <span class="when">{fmt(r.created)}</span>
-        {#if r.status !== 'running'}<button type="button" class="del" title="Remover" onclick={async () => { await deleteRequest(r.id); refresh(); }}><Trash2 size={13} /></button>{/if}
+        {#if r.status === 'done' || r.status === 'error'}<button type="button" class="del" title="Remover do histórico" onclick={async () => { await deleteRequest(r.id); refresh(); }}><Trash2 size={13} /></button>{/if}
       </li>
     {/each}
   </ul>
