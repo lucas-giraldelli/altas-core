@@ -8,7 +8,7 @@
   import { listOverrides, saveOverride, listGroups, saveGroup, deleteGroup, type Override, type Group } from '$lib/db/overrides';
   import { enqueueFs } from '$lib/db/requests';
   import { listStates, saveState, type DocState } from '$lib/db/state';
-  import { me, isAdmin } from '$lib/db/client.svelte';
+  import { me } from '$lib/db/client.svelte';
   import { pb } from '$lib/db/client.svelte';
   import { listAllProgress } from '$lib/db/progress';
   import AskAtlas from '$lib/ui/AskAtlas.svelte';
@@ -171,7 +171,7 @@
       <AskAtlas cats={Object.keys(cats).flatMap((c) => [c, ...subsOf(cats[c], c).filter(Boolean).map((s) => `${c}/${s}`)])} onSent={() => { reqTick++; showHistory = true; autoOpened = true; }} />
       <button class="toggle" type="button" aria-pressed={showHistory} onclick={() => { showHistory = !showHistory; autoOpened = false; clearTimeout(dismissTimer); }} title="Histórico de pedidos" aria-label="Histórico de pedidos"><History size={18} />{#if pendingReqs}<span class="count">{pendingReqs}</span>{/if}</button>
     {/if}
-    {#if nHidden && isAdmin()}<button class="toggle" type="button" aria-pressed={showAll} onclick={() => (showAll = !showAll)} title={showAll ? 'Só os meus e compartilhados' : `Ver também os de outras pessoas (${nHidden})`} aria-label="Ver todos"><Users size={18} /></button>{/if}
+    {#if nHidden}<button class="toggle" type="button" aria-pressed={showAll} onclick={() => (showAll = !showAll)} title={showAll ? 'Só os meus e compartilhados' : `Ver também os de outras pessoas (${nHidden})`} aria-label="Ver todos"><Users size={18} /></button>{/if}
     <button class="toggle" type="button" aria-pressed={showArchived} onclick={() => (showArchived = !showArchived)} title={showArchived ? 'Voltar aos ativos' : `Arquivados (${nArchived})`} aria-label="Arquivados">
       {#if showArchived}<ArchiveRestore size={18} />{:else}<Archive size={18} />{/if}
       {#if nArchived && !showArchived}<span class="count">{nArchived}</span>{/if}
@@ -260,7 +260,7 @@
               {:else}
                 <a href={href(p)} data-sveltekit-reload={p.raw || undefined} onclick={(e) => { e.stopPropagation(); menuFor = null; }}>
                   <span class="ttl">{#if isRead(p)}<BookCheck size={14} class="readmark" />{/if}{title(p)}{#if p.en}<span class="lang">EN</span>{/if}</span>
-                  <span class="meta">{#if isShared(p)}<span class="shared" title="compartilhado com {[...sharedWith(p)].map((id) => people.find((u) => u.id === id)?.username ?? '?').join(', ')}"><Users size={12} /></span>{' · '}{/if}{#if owned(p) && owned(p) !== me() && showAll}<span class="pill muted">{people.find((u) => u.id === owned(p))?.username ?? 'privado'}</span>{' · '}{/if}{#if p.checklist}<span class="prog" class:full={(doneCount[p.slug] ?? 0) >= p.checklist}>{doneCount[p.slug] ?? 0}/{p.checklist}</span>{' · '}{/if}{[p.mode, p.date].filter(Boolean).join(' · ')}</span>
+                  <span class="meta">{#if isShared(p)}<span class="shared" title="compartilhado com {[...sharedWith(p)].map((id) => people.find((u) => u.id === id)?.username ?? '?').join(', ')}"><Users size={12} /></span>{' · '}{/if}{#if owned(p) && owned(p) !== me()}<span class="pill muted">{people.find((u) => u.id === owned(p))?.username ?? 'privado'}</span>{' · '}{/if}{#if p.checklist}<span class="prog" class:full={(doneCount[p.slug] ?? 0) >= p.checklist}>{doneCount[p.slug] ?? 0}/{p.checklist}</span>{' · '}{/if}{[p.mode, p.date].filter(Boolean).join(' · ')}</span>
                 </a>
                 {#if auth.ok}
                   <button type="button" class="more" title="Ações" aria-label="Ações" aria-expanded={menuFor === p.slug} onclick={() => openMenu(p.slug)}><MoreVertical size={16} /></button>
