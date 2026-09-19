@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { RefreshCw, LogOut, AArrowUp, AArrowDown, MoreVertical, BookCheck, BookOpen, Share2, FileDown, WandSparkles } from '@lucide/svelte';
   import { enqueueEdit } from '$lib/db/requests';
-  import { auth, logout } from '$lib/db/client.svelte';
+  import { auth, logout, pb } from '$lib/db/client.svelte';
   import { getScale, setScale, ModeToggle } from '@lucasgiraldelli/atlas-core';
   import { page } from '$app/state';
   import { find } from '$lib/content';
@@ -15,7 +15,32 @@
   $effect(() => { if (onPage && auth.ok) getState(slug).then((o) => (read = !!o?.read)); else read = null; });
   async function toggleRead() { const o = await saveState(slug, { read: !read }); read = !!o.read; }
   // PDF pré-gerado no build (build/pdf/<slug>.pdf): compartilha (mobile) ou baixa; sem PDF, cai na impressão do navegador
-  let sharing = $state(false);
+  let sharing = $state(false), sentMsg = $state(false);
+  // atualização chegou: algum pedido meu concluiu depois que esta página carregou → o botão de recarregar pulsa
+  let fresh = $state(false); const loadedAt = new Date().toISOString();
+  // Só consulta enquanto houver pedido meu pendente/em execução; sem pendência não há polling.
+  // Um pedido novo (askEdit ou seção) reativa a vigilância.
+  let watching = $state(false);
+  async function checkOnce() {
+    try {
+      const open = await pb.collection('requests').getList(1, 1, { filter: 'status = "pending" || status = "running"' });
+      if (open.totalItems === 0) {
+        const done = await pb.collection('requests').getList(1, 1, { filter: `status = "done" && updated > "${loadedAt.replace('T', ' ').slice(0, 19)}"` });
+        if (done.totalItems) fresh = true;
+        watching = false;
+      }
+    } catch { watching = false; }
+  }
+  $effect(() => {
+    if (!auth.ok) return;
+    checkOnce().then(() => { /* se havia pendência, watching fica true abaixo */ });
+    pb.collection('requests').getList(1, 1, { filter: 'status = "pending" || status = "running"' }).then((r) => { if (r.totalItems) watching = true; }).catch(() => {});
+  });
+  $effect(() => {
+    if (!watching) return;
+    const id = setInterval(checkOnce, 20000);
+    return () => clearInterval(id);
+  });
   const canShare = typeof navigator !== 'undefined' && !!navigator.share && !!navigator.canShare;
   async function sharePdf() {
     if (sharing) return; sharing = true;
@@ -33,7 +58,7 @@
     const instruction = prompt('O que mudar neste documento? (ex.: reescrever no registro didático, usar KaTeX nas fórmulas, acrescentar exercícios)');
     if (!instruction?.trim()) return;
     await enqueueEdit({ slug, anchor: '', heading: document.title.replace(/\s*·\s*Atlas$/, ''), instruction: instruction.trim() });
-    alert('Pedido enviado. O histórico da home mostra o resultado quando o worker terminar.'); open = false;
+    sentMsg = true; setTimeout(() => (sentMsg = false), 3000); open = false; watching = true;
   }
   function leave() { logout(); document.cookie = 'atlas_token=; Path=/; Max-Age=0'; location.href = '/gate/'; }
 </script>
@@ -41,7 +66,8 @@
 <svelte:window onclick={(e) => { if (!(e.target as HTMLElement).closest('.topbar')) open = false; }} />
 
 <div class="topbar" class:open>
-  <button type="button" title="Recarregar" aria-label="Recarregar" onclick={() => location.reload()}><RefreshCw size={18} /></button>
+  <button type="button" class:fresh title={fresh ? 'Há atualização: recarregar' : 'Recarregar'} aria-label="Recarregar" onclick={() => location.reload()}><RefreshCw size={18} /></button>
+  {#if sentMsg}<span class="sent">pedido enviado</span>{/if}
   <button type="button" class="more" title="Mais" aria-label="Mais" aria-expanded={open} onclick={toggleMenu}><MoreVertical size={18} /></button>
   <div class="rest" class:armed>
     <button type="button" title="Diminuir fonte" aria-label="Diminuir fonte" onclick={() => (scale = setScale(scale - 0.1))} disabled={scale <= 0.8}><AArrowDown size={18} /><i>fonte menor</i></button>
@@ -57,6 +83,9 @@
 </div>
 
 <style>
+  .fresh { color: var(--red) !important; border-color: var(--red) !important; animation: shake 1.2s ease-in-out infinite; }
+  @keyframes shake { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(-12deg); } 40% { transform: rotate(10deg); } 60% { transform: rotate(-6deg); } 80% { transform: rotate(4deg); } }
+  .sent { align-self: center; font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
   button:disabled { opacity: .35; cursor: default; }
   .rest { display: contents; }
   .more { display: none; }

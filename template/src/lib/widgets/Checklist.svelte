@@ -7,7 +7,7 @@
   import { auth } from '$lib/db/client.svelte';
   import { listProgress, saveProgress, type Progress } from '$lib/db/progress';
   import ChecklistItem from './ChecklistItem.svelte';
-  let { slug, target, lang = 'pt-BR' }: { slug: string; target: HTMLElement; lang?: string } = $props();
+  let { slug, target, lang = 'pt-BR', readOnly = false }: { slug: string; target: HTMLElement; lang?: string; readOnly?: boolean } = $props();
 
   onMount(() => {
     const mounted: Array<Record<string, unknown>> = [];
@@ -25,7 +25,7 @@
         const refText = ref ? (ref.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 6000) : '';
         mounted.push(mount(ChecklistItem, { target: li, props: {
           html: text, refId: ref?.id ?? '', excerpt, refText, slug, index: i, lang,
-          get canEdit() { return auth.ok; },
+          get canEdit() { return auth.ok && !readOnly; },
           get record() { return state.get(i); },
           // o item só é concluído ao salvar uma resposta (sem marcação manual)
           onSave: async (data: Partial<Progress>) => { if ('answer' in data) data.done = !!data.answer?.trim(); state.set(i, await saveProgress(slug, i, data)); }

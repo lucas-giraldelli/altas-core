@@ -45,7 +45,7 @@
       <div class="row acts">
         <button class="add" onclick={() => (adding = true)}><MessageSquarePlus size={14} /> anotar</button>
         {#if onRequestEdit}<button class="add" onclick={() => (asking = true)}><WandSparkles size={14} /> pedir alteração</button>{/if}
-        {#if sent}<span class="sent">pedido enviado; o worker aplica e o histórico da home mostra o resultado</span>{/if}
+        {#if sent}<span class="sent">pedido enviado</span>{/if}
       </div>
     {/if}
   {/if}

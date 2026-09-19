@@ -8,7 +8,7 @@
   async function refresh() { reqs = await listRequests(); onPending?.(reqs.filter((r) => r.status === 'pending' || r.status === 'running').length); }
   $effect(() => { void tick; refresh(); });
   onMount(() => { const t = setInterval(() => { if (reqs.some((r) => r.status === 'pending' || r.status === 'running')) refresh(); }, 10000); return () => clearInterval(t); });
-  const label: Record<string, string> = { exists: 'já existe:', insert: 'inserido em', create: 'criado:', edit: 'alterado:', 'rename-page': 'renomeado:', 'move-page': 'movido:', 'rename-group': 'grupo renomeado:', 'create-group': 'grupo criado:', 'delete-group': 'grupo removido:' };
+  const label: Record<string, string> = { exists: 'já existe:', insert: 'inserido em', create: 'criado:', edit: 'alterado:', 'rename-page': 'renomeado:', 'move-page': 'movido:', 'rename-group': 'grupo renomeado:', 'create-group': 'grupo criado:', 'delete-group': 'grupo removido:', 'clone-page': 'clonado:' };
   const fmt = (d: string) => new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 </script>
 
@@ -26,7 +26,7 @@
             <a href={r.result.url}>{label[r.result.action ?? 'create']} {r.result.title} <ExternalLink size={11} /></a>
             {#if r.result.note}<span class="note">{r.result.note}</span>{/if}
           {:else if r.status === 'error'}<span class="note">{r.result?.note}</span>
-          {:else}<span class="note">{r.status === 'running' ? 'trabalhando…' : 'na fila (o PC precisa estar ligado)'}</span>{/if}
+          {:else}<span class="note">{r.status === 'running' ? 'trabalhando…' : 'na fila'}</span>{/if}
         </span>
         <span class="when">{fmt(r.created)}</span>
         {#if r.status === 'done' || r.status === 'error'}<button type="button" class="del" title="Remover do histórico" onclick={async () => { await deleteRequest(r.id); refresh(); }}><Trash2 size={13} /></button>{/if}

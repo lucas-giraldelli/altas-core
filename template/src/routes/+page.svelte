@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { afterNavigate } from '$app/navigation';
-  import { Pencil, Check, X, ArrowUp, ArrowDown, FolderInput, Plus, Archive, ArchiveRestore, BookCheck, BookOpen, MoreVertical, History, Trash2, ChevronRight, GripVertical, ArrowUpDown, BookMarked, Users } from '@lucide/svelte';
+  import { Pencil, Check, X, ArrowUp, ArrowDown, FolderInput, Plus, Archive, ArchiveRestore, BookCheck, BookOpen, MoreVertical, History, Trash2, ChevronRight, GripVertical, ArrowUpDown, BookMarked, Users, Copy } from '@lucide/svelte';
   import { byCat, type Page } from '$lib/content';
   import { kebab } from '$lib/content/slug';
   import { auth } from '$lib/db/client.svelte';
@@ -135,6 +135,12 @@
     await enqueueFs({ op: 'move-page', slug: p.slug, cat: c, sub: s });
     moving = null; newSub = null; draft = '';
   }
+  let cloning = $state(false); // o drawer de mover está em modo "clonar para mim"
+  async function cloneTo(p: Page, sub: string, cat?: string) {
+    await enqueueFs({ op: 'clone-page', slug: p.slug, cat: cat ?? catOf(p), sub: sub.trim(), owner: me() });
+    moving = null; cloning = false; alert('Clone pedido. Aparece na home quando o worker terminar.');
+  }
+  const pick = (p: Page, sub: string, cat?: string) => (cloning ? cloneTo(p, sub, cat) : moveTo(p, sub, cat));
   let addingSub = $state<string | null>(null);
   // modo de reordenar subcategorias de uma categoria: lista temporária, salva ao confirmar
   let reorderCat = $state<string | null>(null);
@@ -260,7 +266,7 @@
                   <button type="button" class="more" title="Ações" aria-label="Ações" aria-expanded={menuFor === p.slug} onclick={() => openMenu(p.slug)}><MoreVertical size={16} /></button>
                   <span class="tools">
                     <button type="button" title="Renomear" onclick={() => { startEdit(p.slug, title(p)); menuFor = null; }}><Pencil size={14} /></button>
-                    <button type="button" title="Mover para outra subcategoria" onclick={() => { moving = p.slug; draft = subOf(p); menuFor = null; }}><FolderInput size={14} /></button>
+                    {#if owned(p) && owned(p) !== me()}<button type="button" title="Clonar para mim" onclick={() => { moving = p.slug; cloning = true; menuFor = null; }}><Copy size={14} /></button>{:else}<button type="button" title="Mover para outra subcategoria" onclick={() => { moving = p.slug; cloning = false; draft = subOf(p); menuFor = null; }}><FolderInput size={14} /></button>{/if}
                     <button type="button" title="Subir" onclick={() => move(p, cats[cat], -1)}><ArrowUp size={14} /></button>
                     <button type="button" title="Descer" onclick={() => move(p, cats[cat], 1)}><ArrowDown size={14} /></button>
                     <button type="button" title={archived(p) ? 'Desarquivar' : 'Arquivar'} onclick={() => { saveSt(p, { archived: !archived(p) }); menuFor = null; }}>{#if archived(p)}<ArchiveRestore size={14} />{:else}<Archive size={14} />{/if}</button>
@@ -292,7 +298,8 @@
       <div class="sheet" class:armed={menuArmed} role="menu">
         <div class="sheet-title">{title(p)}</div>
         <button type="button" onclick={() => { startEdit(p.slug, title(p)); menuFor = null; }}><Pencil size={18} /> Renomear</button>
-        <button type="button" onclick={() => { moving = p.slug; menuFor = null; }}><FolderInput size={18} /> Mover para outra categoria</button>
+        {#if owned(p) && owned(p) !== me()}<button type="button" onclick={() => { moving = p.slug; cloning = true; menuFor = null; }}><Copy size={18} /> Clonar para mim</button>{:else}
+        <button type="button" onclick={() => { moving = p.slug; cloning = false; menuFor = null; }}><FolderInput size={18} /> Mover para outra categoria</button>{/if}
         <button type="button" onclick={() => move(p, cats[catOf(p)], -1)}><ArrowUp size={18} /> Subir</button>
         <button type="button" onclick={() => move(p, cats[catOf(p)], 1)}><ArrowDown size={18} /> Descer</button>
         <button type="button" onclick={() => { saveSt(p, { archived: !archived(p) }); menuFor = null; }}>{#if archived(p)}<ArchiveRestore size={18} /> Desarquivar{:else}<Archive size={18} /> Arquivar{/if}</button>
@@ -307,23 +314,25 @@
     {#if p}
       {@const cur = catOf(p)}
       <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-      <div class="scrim" onclick={() => (moving = null)}></div>
+      <div class="scrim" onclick={() => { moving = null; cloning = false; }}></div>
       <div class="sheet mover" role="menu">
-        <div class="sheet-title">Mover <b>{title(p)}</b></div>
+        <div class="sheet-title">{cloning ? 'Clonar para mim' : 'Mover'} <b>{title(p)}</b></div>
         <div class="sheet-body">
           {#each Object.keys(cats).sort((a, b) => (a === cur ? -1 : b === cur ? 1 : gname(a).localeCompare(gname(b), 'pt-BR'))) as c}
             <div class="grp-title">{gname(c)}{#if c === cur} <span class="pill muted">atual</span>{/if}</div>
-            <button type="button" class:current={c === cur && subOf(p) === ''} onclick={() => moveTo(p, '', c)}>raiz de {gname(c)}</button>
+            <button type="button" class:current={c === cur && subOf(p) === ''} onclick={() => pick(p, '', c)}>raiz de {gname(c)}</button>
             {#each subsOf(cats[c], c).filter(Boolean) as s}
-              <button type="button" class="sub" class:current={c === cur && subOf(p) === s} onclick={() => moveTo(p, s, c)}>{gname(`${c}/${s}`)}</button>
+              <button type="button" class="sub" class:current={c === cur && subOf(p) === s} onclick={() => pick(p, s, c)}>{gname(`${c}/${s}`)}</button>
             {/each}
           {/each}
+          {#if !cloning}
           <div class="grp-title">Dono</div>
           <button type="button" class:current={!owned(p)} onclick={() => setOwner(p, '')}>de todos</button>
           {#each people as u (u.id)}<button type="button" class="sub" class:current={owned(p) === u.id} onclick={() => setOwner(p, u.id)}>{u.username}{#if u.id === me()} <span class="pill muted">eu</span>{/if}</button>{/each}
           {#if owned(p) && people.some((u) => u.id !== owned(p))}
             <div class="grp-title">Compartilhar com</div>
             {#each people.filter((u) => u.id !== owned(p)) as u (u.id)}<button type="button" class="sub" class:current={(ov[p.slug]?.shared ?? []).includes(u.id)} onclick={() => shareDoc(p, u.id)}>{(ov[p.slug]?.shared ?? []).includes(u.id) ? '✓ ' : ''}{u.username}</button>{/each}
+          {/if}
           {/if}
           <div class="grp-title">Criar</div>
           {#if newSub === p.slug}

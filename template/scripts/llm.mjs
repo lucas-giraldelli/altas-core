@@ -20,7 +20,16 @@ export function llmConfig(env = process.env) {
 }
 
 /** Devolve o texto do modelo; com { json: true } faz o parse (tolerante a cercas ```json). */
-export async function complete(prompt, { json = false, maxTokens = 16000, temperature = 0.3, cfg = llmConfig() } = {}) {
+/** Tenta de novo em 429/5xx (modelo sobrecarregado): 3 tentativas, 3 s e 9 s de espera. */
+export async function complete(prompt, opts = {}) {
+  let last;
+  for (let i = 0; i < 3; i++) {
+    try { return await completeOnce(prompt, opts); }
+    catch (e) { last = e; if (!/\b(429|5\d\d)\b/.test(String(e.message))) throw e; await new Promise((r) => setTimeout(r, 3000 * (i * 2 + 1))); }
+  }
+  throw last;
+}
+async function completeOnce(prompt, { json = false, maxTokens = 16000, temperature = 0.3, cfg = llmConfig() } = {}) {
   const { provider, key, model, base } = cfg;
   if (!key && provider !== 'ollama') throw new Error('LLM_KEY não configurada');
   const jsonHint = json ? '\n\nResponda somente com JSON válido, sem texto fora do objeto e sem cercas de código.' : '';

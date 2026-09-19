@@ -85,7 +85,8 @@ Regras absolutas: registro de livro didático conforme a seção PROSA acima (te
 }
 
 function sh(cmd) { return execSync(cmd, { cwd: ROOT, stdio: 'pipe', encoding: 'utf8' }); }
-function publish(msg, { built = false } = {}) { if (!built) sh('pnpm build'); sh('git add -A content'); sh(`git commit -qm ${JSON.stringify(msg)}`); sh('git push -q'); }
+function publish(msg, { built = false } = {}) { if (!built) sh('pnpm build'); sh('git add -A content'); if (!sh('git status --porcelain content').trim()) return false; // nada mudou (o LLM devolveu o mesmo texto)
+  sh(`git commit -qm ${JSON.stringify(msg)}`); sh('git push -q'); return true; }
 const clean = (s) => s.replace(/ — /g, ': ').replace(/—/g, ',');
 
 /** pasta → nome exibido (grupos do PocketBase + pastas de content/ sem registro) */
@@ -206,13 +207,13 @@ Responda SOMENTE com o HTML da seção reescrita, começando em <section class="
     const out = { note: 'seção reescrita conforme o pedido' };
     html = html.replace(m[0], sec.trim()); writeFileSync(file, html);
     const v = await ensureRenders(file, slug);
-    publish(`feat(content): ${slug}: alteração em #${anchor} (via Atlas + LLM)`, { built: true });
-    const result = { action: 'edit', slug, url: `/${slug}/#${anchor}`, title: req.payload.heading, note: `${out.note ?? ''}${v.removed ? ' (diagrama inválido removido)' : ''}` };
+    const changed = publish(`feat(content): ${slug}: alteração em #${anchor} (via Atlas + LLM)`, { built: true });
+    const result = { action: 'edit', slug, url: `/${slug}/#${anchor}`, title: req.payload.heading, note: changed === false ? 'o modelo não encontrou o que mudar; a seção ficou igual' : `${out.note ?? ''}${v.removed ? ' (diagrama inválido removido)' : ''}` };
     await pb.collection('requests').update(req.id, { status: 'done', result });
     console.log(new Date().toISOString(), 'edit', slug, anchor);
   } catch (e) {
     console.error(new Date().toISOString(), 'edit error', e.message);
-    await pb.collection('requests').update(req.id, { status: 'error', result: { action: 'edit', note: e.message.slice(0, 500) } });
+    await pb.collection('requests').update(req.id, { status: 'error', result: { action: 'edit', note: e.message.slice(0, 500), tries: Number(req.result?.tries ?? 1) } });
   }
 }
 
@@ -257,11 +258,16 @@ async function handle(req) {
     console.log(new Date().toISOString(), 'done', result.action, result.slug);
   } catch (e) {
     console.error(new Date().toISOString(), 'error', e.message);
-    await pb.collection('requests').update(req.id, { status: 'error', result: { note: e.message.slice(0, 500) } });
+    await pb.collection('requests').update(req.id, { status: 'error', result: { note: e.message.slice(0, 500), tries: Number(req.result?.tries ?? 1) } });
   }
 }
 
 async function tick() {
+  // erros de sobrecarga do modelo (429/5xx) voltam para a fila, até 3 vezes
+  for (const r of await pb.collection('requests').getFullList({ filter: 'status = "error"', sort: 'created' })) {
+    const note = String(r.result?.note ?? ''); const tries = Number(r.result?.tries ?? 1);
+    if (/\b(429|5\d\d)\b/.test(note) && tries < 3) await pb.collection('requests').update(r.id, { status: 'pending', result: { ...r.result, tries: tries + 1 } });
+  }
   const pending = await pb.collection('requests').getFullList({ filter: 'status = "pending"', sort: 'created' });
   for (const r of pending) {
     try { await pb.collection('requests').getOne(r.id); } catch { continue; } // apagado enquanto esperava: não executa

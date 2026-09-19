@@ -107,6 +107,8 @@ for (const c of want) {
 // usuários da interface: `username` é a identidade (o gate testa o PIN contra cada um).
 // PB_USERS="lucas:12345678,thyci:52525252" (compat: PB_USER/PB_PIN cria um só)
 const users = await pb.collections.getOne('users');
+// usuários autenticados podem listar os outros (só o username é exibido: dono, compartilhar com)
+if (users.listRule !== AUTH || users.viewRule !== AUTH) { users.listRule = AUTH; users.viewRule = AUTH; await pb.collections.update(users.id, users); console.log('users: list/view for authenticated'); }
 if (!users.fields.some((f) => f.name === 'username')) {
   users.fields.push({ name: 'username', type: 'text', required: true, min: 2, max: 32, pattern: '^[a-z0-9_-]+$' });
   users.indexes = [...(users.indexes ?? []), 'CREATE UNIQUE INDEX idx_users_username ON users (username)'];

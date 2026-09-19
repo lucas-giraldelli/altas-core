@@ -84,6 +84,17 @@ export function makeFs(ROOT, pb) {
       await rekeyGroup(path, to);
       return { path: to, moved: moved.length };
     },
+    /** Copia a página para cat[/sub] como documento de `owner` (notas e progresso do original não vão junto). */
+    async 'clone-page'({ slug, cat, sub, owner }) {
+      const file = join(C, slug + '.html'); if (!existsSync(file)) throw new Error('página inexistente: ' + slug);
+      const name = basename(slug); let to = targetOf(slug, cat, sub, name); let k = 2;
+      while (existsSync(join(C, to + '.html'))) to = targetOf(slug, cat, sub, `${name}-${k++}`);
+      mkdirSync(dirname(join(C, to)), { recursive: true });
+      writeFileSync(join(C, to + '.html'), readFileSync(file, 'utf8'));
+      const keep = join(dirname(join(C, to)), '.gitkeep'); if (existsSync(keep)) sh(`git rm -qf ${JSON.stringify(keep)} || rm -f ${JSON.stringify(keep)}`);
+      if (owner) await pb.collection('overrides').create({ slug: to, owner });
+      return { slug: to, url: `/${to}/` };
+    },
     /** Garante a pasta do grupo no disco (com .gitkeep enquanto vazia). */
     async 'create-group'({ path }) { await ensureGroup(path); return { path }; },
     /** Remove a pasta do grupo se estiver vazia. */

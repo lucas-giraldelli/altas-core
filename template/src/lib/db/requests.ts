@@ -14,7 +14,8 @@ export type FsOp =
   | { op: 'move-page'; slug: string; cat: string; sub: string }
   | { op: 'rename-group'; path: string; title: string }
   | { op: 'create-group'; path: string }
-  | { op: 'delete-group'; path: string };
+  | { op: 'delete-group'; path: string }
+  | { op: 'clone-page'; slug: string; cat: string; sub: string; owner: string };
 /** Pedido de alteração de uma seção de um documento (o worker reescreve só aquela seção). */
 export type EditOp = { slug: string; anchor: string; heading: string; instruction: string };
 const col = () => pb.collection('requests');
