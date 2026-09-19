@@ -1,5 +1,6 @@
 <script lang="ts">
   import { MessageSquarePlus, Pencil, Trash2, Check, X, WandSparkles } from '@lucide/svelte';
+  import EditModal from '$lib/ui/EditModal.svelte';
   import type { Note } from '$lib/db/notes';
   let { anchor, notes, canEdit, onAdd, onEdit, onDelete, onRequestEdit }: {
     anchor: string; notes: Note[]; canEdit: boolean;
@@ -7,12 +8,14 @@
     onRequestEdit?: (instruction: string) => Promise<void>;
   } = $props();
   let asking = $state(false), ask = $state(''), sent = $state(false);
-  async function submitAsk() { if (ask.trim() && onRequestEdit) { await onRequestEdit(ask.trim()); ask = ''; asking = false; sent = true; setTimeout(() => (sent = false), 4000); } }
+  async function submitAsk(instruction: string) { if (onRequestEdit) { await onRequestEdit(instruction); sent = true; setTimeout(() => (sent = false), 4000); } }
+  const heading = () => (document.getElementById(anchor)?.querySelector('h2, h3')?.textContent ?? anchor).replace(/^\d+/, '').trim();
   let adding = $state(false), draft = $state(''), editing = $state<string | null>(null), edraft = $state('');
   const fmt = (d: string) => new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
   async function submit() { if (draft.trim()) { await onAdd(draft.trim()); draft = ''; adding = false; } }
 </script>
 
+{#if asking}<EditModal title={heading()} scope="seção" onSubmit={submitAsk} onClose={() => (asking = false)} />{/if}
 {#if notes.length || canEdit}
 <div class="notes" data-anchor={anchor}>
   {#each notes as n (n.id)}
@@ -34,12 +37,6 @@
         <!-- svelte-ignore a11y_autofocus -->
         <textarea bind:value={draft} rows="3" placeholder="sua nota…" autofocus onkeydown={(e) => { if (e.key === 'Escape') adding = false; if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) submit(); }}></textarea>
         <div class="row"><button onclick={submit}><Check size={14} /> salvar</button><button onclick={() => (adding = false)}><X size={14} /></button></div>
-      </div>
-    {:else if asking}
-      <div class="note new ask">
-        <!-- svelte-ignore a11y_autofocus -->
-        <textarea bind:value={ask} rows="3" placeholder="o que mudar nesta seção: explicar melhor…, acrescentar exemplo de…, encurtar…" autofocus onkeydown={(e) => { if (e.key === 'Escape') asking = false; if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) submitAsk(); }}></textarea>
-        <div class="row"><button onclick={submitAsk}><WandSparkles size={14} /> pedir alteração</button><button onclick={() => (asking = false)}><X size={14} /></button></div>
       </div>
     {:else}
       <div class="row acts">

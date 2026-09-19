@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { RefreshCw, LogOut, AArrowUp, AArrowDown, MoreVertical, BookCheck, BookOpen, Share2, FileDown, WandSparkles } from '@lucide/svelte';
   import { enqueueEdit } from '$lib/db/requests';
+  import EditModal from './EditModal.svelte';
   import { auth, logout, pb } from '$lib/db/client.svelte';
   import { getScale, setScale, ModeToggle } from '@lucasgiraldelli/atlas-core';
   import { page } from '$app/state';
@@ -54,14 +55,17 @@
     finally { sharing = false; open = false; }
   }
   // alteração do documento inteiro (o worker reescreve a página conforme a instrução)
-  async function askEdit() {
-    const instruction = prompt('O que mudar neste documento? (ex.: reescrever no registro didático, usar KaTeX nas fórmulas, acrescentar exercícios)');
-    if (!instruction?.trim()) return;
-    await enqueueEdit({ slug, anchor: '', heading: document.title.replace(/\s*·\s*Atlas$/, ''), instruction: instruction.trim() });
-    sentMsg = true; setTimeout(() => (sentMsg = false), 3000); open = false; watching = true;
+  let editOpen = $state(false);
+  const docTitle = () => document.title.replace(/\s*·\s*Atlas$/, '');
+  function askEdit() { open = false; editOpen = true; }
+  async function sendEdit(instruction: string) {
+    await enqueueEdit({ slug, anchor: '', heading: docTitle(), instruction });
+    sentMsg = true; setTimeout(() => (sentMsg = false), 3000); watching = true;
   }
   function leave() { logout(); document.cookie = 'atlas_token=; Path=/; Max-Age=0'; location.href = '/gate/'; }
 </script>
+
+{#if editOpen}<EditModal title={docTitle()} scope="documento" onSubmit={sendEdit} onClose={() => (editOpen = false)} />{/if}
 
 <svelte:window onclick={(e) => { if (!(e.target as HTMLElement).closest('.topbar')) open = false; }} />
 
