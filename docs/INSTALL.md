@@ -32,7 +32,7 @@ PB_PASS=a-long-password
 PB_USERS=alice:12345678,bob:87654321   # interface users, name:PIN (8 digits); each person has their own PIN
 ```
 
-`.env` holds the two public values the browser sees: `PUBLIC_PB_URL` (the PocketBase URL, `http://localhost:8090` locally) and `PUBLIC_PB_USERS` (the usernames the gate tries the PIN against, e.g. `alice,bob`). Each person has their own notes, checklist answers, reading position, read and archived flags; a document can be shared or owned by one person (others do not see it on the home).
+`.env` holds the two public values the browser sees: `PUBLIC_PB_URL` (the PocketBase URL, `http://localhost:8090` locally) and `PUBLIC_PB_USERS` (the usernames the gate tries the PIN against, e.g. `alice,bob`) and `PUBLIC_PB_ADMIN` (the one user who can reveal documents owned by others). Each person has their own notes, checklist answers, reading position, read and archived flags; a document can be shared or owned by one person (others do not see it on the home).
 
 ### 3. Install and start
 

@@ -8,7 +8,7 @@
   import { listOverrides, saveOverride, listGroups, saveGroup, deleteGroup, type Override, type Group } from '$lib/db/overrides';
   import { enqueueFs } from '$lib/db/requests';
   import { listStates, saveState, type DocState } from '$lib/db/state';
-  import { me, USERS } from '$lib/db/client.svelte';
+  import { me, isAdmin } from '$lib/db/client.svelte';
   import { pb } from '$lib/db/client.svelte';
   import { listAllProgress } from '$lib/db/progress';
   import AskAtlas from '$lib/ui/AskAtlas.svelte';
@@ -52,7 +52,7 @@
   // usuários conhecidos (para atribuir dono): id → username, carregado do PocketBase
   let people = $state<{ id: string; username: string }[]>([]);
   // última página aberta (overrides.opened), para retomar de onde parou
-  const last = $derived.by(() => { let best: DocState | null = null; for (const s of Object.values(st)) if (s.opened && !s.archived && (!best || s.opened > best.opened) && allPages.some((x) => x.slug === s.slug)) best = s; return best ? allPages.find((x) => x.slug === best!.slug)! : null; });          // lista só aparece com overrides/grupos carregados (sem flick de recolher)
+  const last = $derived.by(() => { let best: DocState | null = null; for (const s of Object.values(st)) { const pg = allPages.find((x) => x.slug === s.slug); if (pg && s.opened && !s.archived && (!best || s.opened > best.opened) && (!owned(pg) || owned(pg) === me())) best = s; } return best ? allPages.find((x) => x.slug === best!.slug)! : null; });          // lista só aparece com overrides/grupos carregados (sem flick de recolher)
 
   afterNavigate(() => scrollTo(0, 0));
   onMount(async () => {
@@ -157,7 +157,7 @@
       <AskAtlas cats={Object.keys(cats).flatMap((c) => [c, ...subsOf(cats[c], c).filter(Boolean).map((s) => `${c}/${s}`)])} onSent={() => { reqTick++; showHistory = true; autoOpened = true; }} />
       <button class="toggle" type="button" aria-pressed={showHistory} onclick={() => { showHistory = !showHistory; autoOpened = false; clearTimeout(dismissTimer); }} title="Histórico de pedidos" aria-label="Histórico de pedidos"><History size={18} />{#if pendingReqs}<span class="count">{pendingReqs}</span>{/if}</button>
     {/if}
-    {#if nHidden}<button class="toggle" type="button" aria-pressed={showAll} onclick={() => (showAll = !showAll)} title={showAll ? 'Só os meus e compartilhados' : `Ver também os de outras pessoas (${nHidden})`} aria-label="Ver todos"><Users size={18} /></button>{/if}
+    {#if nHidden && isAdmin()}<button class="toggle" type="button" aria-pressed={showAll} onclick={() => (showAll = !showAll)} title={showAll ? 'Só os meus e compartilhados' : `Ver também os de outras pessoas (${nHidden})`} aria-label="Ver todos"><Users size={18} /></button>{/if}
     <button class="toggle" type="button" aria-pressed={showArchived} onclick={() => (showArchived = !showArchived)} title={showArchived ? 'Voltar aos ativos' : `Arquivados (${nArchived})`} aria-label="Arquivados">
       {#if showArchived}<ArchiveRestore size={18} />{:else}<Archive size={18} />{/if}
       {#if nArchived && !showArchived}<span class="count">{nArchived}</span>{/if}

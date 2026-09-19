@@ -1,6 +1,6 @@
 /** PocketBase: camada do usuário por cima do conteúdo estático. Cada pessoa tem um usuário (username) e um PIN (senha); o gate só pede o PIN e testa contra cada usuário. */
 import PocketBase from 'pocketbase';
-import { PUBLIC_PB_URL, PUBLIC_PB_USERS } from '$env/static/public';
+import { PUBLIC_PB_URL, PUBLIC_PB_USERS, PUBLIC_PB_ADMIN } from '$env/static/public';
 import { browser } from '$app/environment';
 
 export const pb = new PocketBase(PUBLIC_PB_URL);
@@ -21,6 +21,8 @@ export async function loginWithPin(pin: string) {
 }
 /** id do usuário logado (dono dos registros pessoais) */
 export const me = () => pb.authStore.record?.id ?? '';
+/** administrador: o único que pode ver documentos de outras pessoas ("ver todos") */
+export const isAdmin = () => !!PUBLIC_PB_ADMIN && myName() === PUBLIC_PB_ADMIN;
 export const myName = () => (pb.authStore.record as { username?: string } | null)?.username ?? '';
 export const logout = () => pb.authStore.clear();
 
