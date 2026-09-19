@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { RefreshCw, LogOut, AArrowUp, AArrowDown, MoreVertical, BookCheck, BookOpen, Share2, FileDown } from '@lucide/svelte';
+  import { RefreshCw, LogOut, AArrowUp, AArrowDown, MoreVertical, BookCheck, BookOpen, Share2, FileDown, WandSparkles } from '@lucide/svelte';
+  import { enqueueEdit } from '$lib/db/requests';
   import { auth, logout } from '$lib/db/client.svelte';
   import { getScale, setScale, ModeToggle } from '@lucasgiraldelli/atlas-core';
   import { page } from '$app/state';
@@ -27,6 +28,13 @@
     } catch (e: any) { if (e?.name !== 'AbortError') print(); }
     finally { sharing = false; open = false; }
   }
+  // alteração do documento inteiro (o worker reescreve a página conforme a instrução)
+  async function askEdit() {
+    const instruction = prompt('O que mudar neste documento? (ex.: reescrever no registro didático, usar KaTeX nas fórmulas, acrescentar exercícios)');
+    if (!instruction?.trim()) return;
+    await enqueueEdit({ slug, anchor: '', heading: document.title.replace(/\s*·\s*Atlas$/, ''), instruction: instruction.trim() });
+    alert('Pedido enviado. O histórico da home mostra o resultado quando o worker terminar.'); open = false;
+  }
   function leave() { logout(); document.cookie = 'atlas_token=; Path=/; Max-Age=0'; location.href = '/gate/'; }
 </script>
 
@@ -40,6 +48,7 @@
     <button type="button" title="Aumentar fonte" aria-label="Aumentar fonte" onclick={() => (scale = setScale(scale + 0.1))} disabled={scale >= 1.4}><AArrowUp size={18} /><i>fonte maior</i></button>
     <ModeToggle />
     {#if onPage}<button type="button" title={canShare ? 'Compartilhar PDF' : 'Baixar PDF'} aria-label={canShare ? 'Compartilhar PDF' : 'Baixar PDF'} disabled={sharing} onclick={sharePdf}>{#if canShare}<Share2 size={18} />{:else}<FileDown size={18} />{/if}<i>{canShare ? 'compartilhar pdf' : 'baixar pdf'}</i></button>{/if}
+    {#if onPage && auth.ok}<button type="button" title="Pedir alteração no documento" aria-label="Pedir alteração" onclick={askEdit}><WandSparkles size={18} /><i>pedir alteração</i></button>{/if}
     {#if read !== null}
       <button type="button" title={read ? 'Marcar como não lido' : 'Marcar como lido'} class:active={read} onclick={toggleRead}>{#if read}<BookCheck size={18} />{:else}<BookOpen size={18} />{/if}<i>{read ? 'lido' : 'marcar como lido'}</i></button>
     {/if}

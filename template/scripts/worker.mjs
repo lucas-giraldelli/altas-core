@@ -160,6 +160,30 @@ async function handleEdit(req) {
   try {
     const file = join(ROOT, 'content', slug + '.html'); if (!existsSync(file)) throw new Error('página inexistente: ' + slug);
     let html = readFileSync(file, 'utf8');
+    if (!anchor) { // documento inteiro
+      const raw = await complete(`Você é o autor didático do Atlas. Reescreva o documento abaixo seguindo a instrução do leitor e, obrigatoriamente, as regras de escrita e o contrato da página: registro de livro didático (terceira pessoa, sem "você", sem coloquialismos, sem travessões, títulos que nomeiam o conteúdo), fórmulas em KaTeX ($…$ e $$…$$ dentro de div.eq, com as macros de cor \\hlb \\hla \\hlg \\hlr quando ajudarem), Mermaid válido (labels em inglês entre aspas; classDef com stroke e color aplicados inline com :::nome; nunca a instrução "class"), seção de exercícios com resolução revelável e checklist final com data-ref. Mantenha o mesmo <title>, as metas e o id das seções que continuarem existindo.
+
+# REGRAS DE ESCRITA
+${RULES}
+
+# CONTRATO DA PÁGINA
+${CONTRACT}
+
+# INSTRUÇÃO DO LEITOR
+${instruction}
+
+# DOCUMENTO ATUAL
+${html}
+
+Responda SOMENTE com o documento HTML completo, do <!DOCTYPE html> ao </html>, sem cercas de código.`, { cfg: LLM, json: false, maxTokens: 32000 });
+      const doc = String(raw).match(/<!DOCTYPE html>[\s\S]*<\/html>/i); if (!doc) throw new Error('resposta sem documento completo');
+      const next = clean(doc[0]); if (!/atlas-mode/.test(next) || !/<main/.test(next) || !/<ul class="checklist"/.test(next)) throw new Error('documento fora do contrato');
+      writeFileSync(file, next);
+      const v = await ensureRenders(file, slug);
+      publish(`feat(content): ${slug}: reescrita (via Atlas + LLM)`, { built: true });
+      await pb.collection('requests').update(req.id, { status: 'done', result: { action: 'edit', slug, url: `/${slug}/`, title: req.payload.heading, note: `documento reescrito${v.removed ? ' (diagrama inválido removido)' : ''}` } });
+      console.log(new Date().toISOString(), 'edit(doc)', slug); return;
+    }
     const re = new RegExp(`<section class="topic"[^>]*\\bid="${anchor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"[^>]*>[\\s\\S]*?</section>`);
     const m = html.match(re); if (!m) throw new Error('seção não encontrada: ' + anchor);
     const raw = await complete(`Você é o autor didático do Atlas. Reescreva a seção abaixo de uma página existente seguindo a instrução do leitor, mantendo o contrato da página, o mesmo id da seção, o mesmo registro (livro didático, terceira pessoa, sem "você", sem travessões, títulos que nomeiam o conteúdo) e as cores por papel já usadas. Pode ampliar, acrescentar exemplos, boxes, um diagrama Mermaid (labels em inglês entre aspas, classDef com stroke e color aplicados inline com :::nome, nunca a instrução "class") ou encurtar, conforme pedido. Não altere o que a instrução não pede. Código em <pre data-lang="x"><code> escapado.
